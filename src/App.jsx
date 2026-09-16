@@ -6,7 +6,7 @@ import {
 import {
   Users, TrendingUp, CheckCircle2, Clock, Search, Plus, Download,
   ArrowRight, LayoutDashboard, ClipboardList, AlertCircle, Lock,
-  List, Coins, Gem, Trophy, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, History, Layers, MoreVertical, FileText, FileDown, Calculator
+  List, Coins, Gem, Trophy, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, History, Layers, MoreVertical, FileText, FileDown, Calculator, Database
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 
@@ -894,7 +894,7 @@ function AllLeadsPanel({ leads, onUpdate, hideKategori }) {
         <ExportMenu onExportPng={exportPng} onExportCsv={exportCsv} />
       </div>
 
-      <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "auto", marginBottom: 12 }}>
+      <div className="admin-table-wrap" style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "auto", marginBottom: 12 }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
           <thead>
             <tr style={{ textAlign: "left", color: "#888780", background: "#F8F9FA" }}>
@@ -1277,7 +1277,7 @@ function FollowUpPanel({ leads }) {
         <ExportMenu onExportPng={exportPng} onExportCsv={exportCsv} />
       </div>
 
-      <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "auto", marginBottom: 12 }}>
+      <div className="admin-table-wrap" style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "auto", marginBottom: 12 }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
           <thead>
             <tr style={{ textAlign: "left", color: "#888780", background: "#F8F9FA" }}>
@@ -2317,6 +2317,9 @@ const MOBILE_CSS = `
   .admin-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .admin-table-wrap table { min-width: 850px; }
   .mobile-bottom-nav { display: none; }
+  .data-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .data-table-wrap table { min-width: 600px; }
+  .inactive-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
 
   @media (max-width: 768px) {
     .mobile-app { padding-bottom: 78px; }
@@ -2388,9 +2391,14 @@ const MOBILE_CSS = `
 
     .admin-table-wrap { margin: 0 -4px; overflow-x: auto !important; }
     .admin-table-wrap table { min-width: 850px; }
+    .data-table-wrap { margin: 0 -4px; overflow-x: auto !important; }
+    .data-table-wrap table { min-width: 560px; font-size: 11.5px !important; }
+    .inactive-info-grid { grid-template-columns: 1fr !important; gap: 3px 0 !important; }
+    .inactive-modal-card { padding: 16px !important; }
+    .inactive-modal-card form button[type="submit"] { width: 100%; min-height: 48px; justify-content: center; }
 
     .mobile-bottom-nav {
-      display: grid; grid-template-columns: repeat(3, 1fr);
+      display: grid; grid-template-columns: repeat(4, 1fr);
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 100;
       background: rgba(255,255,255,.97); border-top: 1px solid #E5E7EB;
       box-shadow: 0 -4px 18px rgba(0,0,0,.08);
@@ -2414,6 +2422,251 @@ const MOBILE_CSS = `
     .mobile-header-title { font-size: 14px !important; }
   }
 `;
+const DATA_EMPTY_FILTERS = { produk: new Set(), pekerjaan: new Set() };
+
+function InactiveCustomerModal({ customer, onClose, onSubmitLead, onConverted }) {
+  const [produk, setProduk] = useState(PRODUK_OPTIONS[0]);
+  const [keterangan, setKeterangan] = useState(KETERANGAN_OPTIONS[0]);
+  const [pemasar, setPemasar] = useState("");
+  const [unit, setUnit] = useState(UNIT_OPTIONS[0]);
+  const [catatan, setCatatan] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!pemasar.trim()) { setError("Nama pemasar wajib diisi."); return; }
+    setError("");
+    const status = keterangan === "Berminat" ? "NEW" : "REJECTED";
+    const lead = {
+      id: Date.now().toString(),
+      tanggal: todayStr(),
+      sumber: "Nasabah Inaktif",
+      nama: customer.nama,
+      phone: customer.hp,
+      produk,
+      keterangan,
+      pemasar: pemasar.trim(),
+      unit,
+      status,
+      catatan: `${todayStr()}: ${catatan.trim() || "Follow up dari data nasabah inaktif."}`,
+    };
+    onSubmitLead(lead);
+    onConverted(customer.cif);
+  };
+
+  const fields = [
+    ["CIF", customer.cif],
+    ["Produk Terakhir", customer.produk_terakhir],
+    ["Tanggal Kredit Terakhir", customer.tgl_kredit_terakhir],
+    ["Alamat", customer.alamat],
+    ["No. HP", customer.hp],
+    ["Umur", customer.umur],
+    ["Jenis Kelamin", customer.jenis_kelamin === "P" ? "Perempuan" : customer.jenis_kelamin === "L" ? "Laki-laki" : customer.jenis_kelamin],
+    ["Pendidikan", customer.pendidikan],
+    ["Pekerjaan", customer.pekerjaan],
+    ["Sumber Dana", customer.sumber_dana],
+    ["Nama Perusahaan", customer.nama_perusahaan],
+    ["Agama", customer.agama],
+    ["Kelurahan", customer.kelurahan],
+    ["Kecamatan", customer.kecamatan],
+    ["Kabupaten/Kota", customer.kabupaten],
+    ["Provinsi", customer.provinsi],
+  ];
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, background: "rgba(15,23,20,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 1000 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="inactive-modal-card"
+        style={{ background: "#fff", borderRadius: 12, padding: 22, boxShadow: "0 10px 40px rgba(0,0,0,0.25)", maxWidth: 640, width: "100%", maxHeight: "90vh", overflow: "auto" }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "#2C2C2A" }}>{customer.nama}</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "#888780", cursor: "pointer", fontSize: 13 }}>Tutup</button>
+        </div>
+
+        <div className="inactive-info-grid" style={{ fontSize: 12.5, color: "#5F5E5A", background: "#F8F9FA", borderRadius: 8, padding: 12, marginBottom: 16 }}>
+          {fields.map(([label, value]) => (
+            <div key={label}><strong>{label}:</strong> {value || "-"}</div>
+          ))}
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Hasil follow up</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+            <Field label="Produk yang ditawarkan" required>
+              <select style={inputStyle} value={produk} onChange={(e) => setProduk(e.target.value)}>
+                {PRODUK_OPTIONS.map((o) => <option key={o}>{o}</option>)}
+              </select>
+            </Field>
+            <Field label="Keterangan" required>
+              <select style={inputStyle} value={keterangan} onChange={(e) => setKeterangan(e.target.value)}>
+                {KETERANGAN_OPTIONS.map((o) => <option key={o}>{o}</option>)}
+              </select>
+            </Field>
+            <Field label="Nama pemasar" required>
+              <input style={inputStyle} value={pemasar} onChange={(e) => setPemasar(e.target.value)} placeholder="Nama Anda" />
+            </Field>
+            <Field label="Unit kerja" required>
+              <select style={inputStyle} value={unit} onChange={(e) => setUnit(e.target.value)}>
+                {UNIT_OPTIONS.map((o) => <option key={o}>{o}</option>)}
+              </select>
+            </Field>
+          </div>
+          <Field label="Catatan hasil follow up">
+            <textarea style={{ ...inputStyle, minHeight: 70, resize: "vertical" }} value={catatan} onChange={(e) => setCatatan(e.target.value)} placeholder="Tuliskan hasil follow up..." />
+          </Field>
+          {error && <div style={{ color: "#A32D2D", fontSize: 13, marginBottom: 10 }}>{error}</div>}
+          <button type="submit" style={{ background: "#0A5C36", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
+            Simpan &amp; masukkan ke Daftar Prospek
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function DataNasabahInaktifPanel({ customers, onSubmit }) {
+  const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState(DATA_EMPTY_FILTERS);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [followedUp, setFollowedUp] = useState(() => new Set());
+
+  const options = useMemo(() => ({
+    produk: [...new Set(customers.map((c) => c.produk_terakhir))].filter(Boolean).sort(),
+    pekerjaan: [...new Set(customers.map((c) => c.pekerjaan))].filter(Boolean).sort(),
+  }), [customers]);
+
+  const setFilter = (key) => (set) => setFilters((f) => ({ ...f, [key]: set }));
+  const resetFilters = () => setFilters(DATA_EMPTY_FILTERS);
+  const activeCount = Object.values(filters).filter((s) => s.size > 0).length;
+
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase();
+    return customers.filter((c) => {
+      const matchQuery = !q || (c.nama || "").toLowerCase().includes(q) || (c.hp || "").includes(q);
+      const matchField = (key, value) => filters[key].size === 0 || filters[key].has(value);
+      return matchQuery && matchField("produk", c.produk_terakhir) && matchField("pekerjaan", c.pekerjaan);
+    });
+  }, [query, filters, customers]);
+
+  useEffect(() => { setPage(1); }, [query, filters, pageSize]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paged = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const handleConverted = (cif) => {
+    setFollowedUp((prev) => { const next = new Set(prev); next.add(cif); return next; });
+    setSelectedCustomer(null);
+  };
+
+  return (
+    <div>
+      <div style={{ fontSize: 12, color: "#888780", marginBottom: 12 }}>
+        Data historis nasabah tidak aktif untuk digarap ulang oleh pemasar. Data sumber ini tidak diubah — begitu hasil follow up disimpan, otomatis masuk sebagai prospek baru di menu Daftar Prospek (sumber: "Nasabah Inaktif").
+      </div>
+
+      <div style={{ position: "relative", maxWidth: 320, marginBottom: 10 }}>
+        <Search size={16} style={{ position: "absolute", left: 10, top: 11, color: "#888780" }} />
+        <input style={{ ...inputStyle, paddingLeft: 34 }} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari nama atau nomor HP..." />
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
+        <div style={{ fontSize: 12, color: "#888780" }}>
+          Menampilkan {filtered.length} dari {customers.length} nasabah inaktif
+          {activeCount > 0 && (
+            <button onClick={resetFilters} style={{ background: "none", border: "none", color: "#A32D2D", fontSize: 12, fontWeight: 500, cursor: "pointer", marginLeft: 10 }}>
+              Reset filter ({activeCount})
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="data-table-wrap" style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "auto", marginBottom: 12 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+          <thead>
+            <tr style={{ textAlign: "left", color: "#888780", background: "#F8F9FA" }}>
+              <th style={{ padding: "8px 12px" }}>Nama</th>
+              <th style={{ padding: "8px 12px" }}>No. HP</th>
+              <th style={{ padding: "8px 12px" }}>
+                <FilterDropdown label="Produk terakhir" fieldKey="produk" options={options.produk} selected={filters.produk} onChange={setFilter("produk")} variant="header" />
+              </th>
+              <th style={{ padding: "8px 12px" }}>
+                <FilterDropdown label="Pekerjaan" fieldKey="pekerjaan" options={options.pekerjaan} selected={filters.pekerjaan} onChange={setFilter("pekerjaan")} variant="header" />
+              </th>
+              <th style={{ padding: "8px 12px" }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {paged.length === 0 ? (
+              <tr><td colSpan={5} style={{ padding: 20, textAlign: "center", color: "#888780" }}>Tidak ada nasabah yang cocok.</td></tr>
+            ) : paged.map((c) => (
+              <tr key={c.cif} style={{ borderTop: "1px solid #F1EFE8" }}>
+                <td style={{ padding: "8px 12px" }}>{c.nama}</td>
+                <td style={{ padding: "8px 12px" }}>{c.hp}</td>
+                <td style={{ padding: "8px 12px" }}>{c.produk_terakhir}</td>
+                <td style={{ padding: "8px 12px" }}>{c.pekerjaan}</td>
+                <td style={{ padding: "8px 12px" }}>
+                  {followedUp.has(c.cif) ? (
+                    <span style={{ fontSize: 11.5, fontWeight: 500, color: "#27500A", background: "#EAF3DE", padding: "5px 10px", borderRadius: 6 }}>Sudah di-follow up</span>
+                  ) : (
+                    <button onClick={() => setSelectedCustomer(c)} style={{ background: "#F1EFE8", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#3d3d3a" }}>
+                      Follow up
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#5F5E5A" }}>
+          Tampilkan
+          <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} style={{ ...inputStyle, width: "auto", padding: "5px 8px", fontSize: 12.5 }}>
+            {PAGE_SIZE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+          per halaman
+        </div>
+        {totalPages > 1 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+              style={{ background: "#fff", border: "1px solid #D3D1C7", borderRadius: 8, padding: "6px 12px", fontSize: 12.5, fontWeight: 500, cursor: currentPage <= 1 ? "not-allowed" : "pointer", color: currentPage <= 1 ? "#C7C5BC" : "#3d3d3a" }}
+            >
+              Sebelumnya
+            </button>
+            <span style={{ fontSize: 12.5, color: "#5F5E5A" }}>Halaman {currentPage} dari {totalPages}</span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              style={{ background: "#fff", border: "1px solid #D3D1C7", borderRadius: 8, padding: "6px 12px", fontSize: 12.5, fontWeight: 500, cursor: currentPage >= totalPages ? "not-allowed" : "pointer", color: currentPage >= totalPages ? "#C7C5BC" : "#3d3d3a" }}
+            >
+              Selanjutnya
+            </button>
+          </div>
+        )}
+      </div>
+
+      {selectedCustomer && (
+        <InactiveCustomerModal
+          customer={selectedCustomer}
+          onClose={() => setSelectedCustomer(null)}
+          onSubmitLead={onSubmit}
+          onConverted={handleConverted}
+        />
+      )}
+    </div>
+  );
+}
+
 export default function App() {
   const [leads, setLeads] = useState([]);
   const [view, setView] = useState("input");
@@ -2421,6 +2674,7 @@ export default function App() {
   const [inputTab, setInputTab] = useState("new");
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [customersInactive, setCustomersInactive] = useState([]);
 
   useEffect(() => {
     (async () => {
@@ -2434,6 +2688,16 @@ export default function App() {
         setLeads(data || []);
       }
       setLoaded(true);
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase
+        .from("customers_inactive")
+        .select("*")
+        .order("nama", { ascending: true });
+      if (!error) setCustomersInactive(data || []);
     })();
   }, []);
 
@@ -2486,6 +2750,10 @@ export default function App() {
               display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500,
               background: view === "simulasi" ? "#fff" : "rgba(255,255,255,0.15)", color: view === "simulasi" ? "#0A5C36" : "#fff",
             }}><Calculator size={15} /> Simulasi produk</button>
+            <button onClick={() => setView("data")} style={{
+              display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500,
+              background: view === "data" ? "#fff" : "rgba(255,255,255,0.15)", color: view === "data" ? "#0A5C36" : "#fff",
+            }}>{adminUnlocked ? <Database size={15} /> : <Lock size={13} />} Data</button>
             <button onClick={() => setView("admin")} style={{
               display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500,
               background: view === "admin" ? "#fff" : "rgba(255,255,255,0.15)", color: view === "admin" ? "#0A5C36" : "#fff",
@@ -2505,6 +2773,8 @@ export default function App() {
           </div>
         ) : view === "simulasi" ? (
           <SimulasiProdukPanel />
+        ) : view === "data" ? (
+          adminUnlocked ? <DataNasabahInaktifPanel customers={customersInactive} onSubmit={addLead} /> : <AdminGate onUnlock={() => setAdminUnlocked(true)} />
         ) : adminUnlocked ? (
           <AdminDashboard leads={leads} onUpdate={updateLead} />
         ) : (
@@ -2515,11 +2785,15 @@ export default function App() {
       <nav className="mobile-bottom-nav" aria-label="Navigasi mobile">
         <button className={view === "input" ? "active" : ""} onClick={() => setView("input")}>
           <ClipboardList />
-          <span>Portal Pemasar</span>
+          <span>Pemasar</span>
         </button>
         <button className={view === "simulasi" ? "active" : ""} onClick={() => setView("simulasi")}>
           <Calculator />
           <span>Simulasi</span>
+        </button>
+        <button className={view === "data" ? "active" : ""} onClick={() => setView("data")}>
+          {adminUnlocked ? <Database /> : <Lock />}
+          <span>Data</span>
         </button>
         <button className={view === "admin" ? "active" : ""} onClick={() => setView("admin")}>
           {adminUnlocked ? <LayoutDashboard /> : <Lock />}

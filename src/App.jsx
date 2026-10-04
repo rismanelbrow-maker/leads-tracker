@@ -177,7 +177,7 @@ function NewLeadForm({ onSubmit }) {
   );
 }
 
-function UpdateLeadPanel({ leads, onUpdate }) {
+function UpdateLeadPanel({ leads, onUpdate, onOpenSimulasi }) {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   const [ket, setKet] = useState("Berminat");
@@ -247,6 +247,21 @@ function UpdateLeadPanel({ leads, onUpdate }) {
             <div style={{ marginTop: 10, fontSize: 12, color: "#5F5E5A", whiteSpace: "pre-line", background: "#fff", borderRadius: 8, padding: 10 }}>
               {selected.catatan}
             </div>
+            {onOpenSimulasi && (
+              <div style={{ marginTop: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => onOpenSimulasi(selected)}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    background: "#E8F5E9", border: "1px solid #A5D6A7", color: "#1B5E20",
+                    borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer"
+                  }}
+                >
+                  <Calculator size={15} /> Hitung Simulasi Angsuran ({selected.produk})
+                </button>
+              </div>
+            )}
           </div>
 
           <form onSubmit={handleSave}>
@@ -276,7 +291,7 @@ function UpdateLeadPanel({ leads, onUpdate }) {
   );
 }
 
-function CategoryPanel({ leads, kategori, chartColor, onUpdate }) {
+function CategoryPanel({ leads, kategori, chartColor, onUpdate, onOpenSimulasi }) {
   const filtered = leads.filter((l) => categorize(l.produk) === kategori);
   const statusCounts = STATUS_OPTIONS.map((s) => ({ name: s, jumlah: filtered.filter((l) => l.status === s).length })).filter((d) => d.jumlah > 0);
   const prodMap = {};
@@ -314,7 +329,7 @@ function CategoryPanel({ leads, kategori, chartColor, onUpdate }) {
           </ResponsiveContainer>
         </div>
       </div>
-      <AllLeadsPanel leads={filtered} onUpdate={onUpdate} hideKategori />
+      <AllLeadsPanel leads={filtered} onUpdate={onUpdate} hideKategori onOpenSimulasi={onOpenSimulasi} />
     </div>
   );
 }
@@ -692,7 +707,7 @@ function ExportMenu({ onExportPng, onExportCsv, onExportPdf }) {
   );
 }
 
-function AllLeadsPanel({ leads, onUpdate, hideKategori }) {
+function AllLeadsPanel({ leads, onUpdate, hideKategori, onOpenSimulasi }) {
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [sortState, setSortState] = useState({ key: "tanggal", dir: "desc" });
@@ -938,10 +953,21 @@ function AllLeadsPanel({ leads, onUpdate, hideKategori }) {
                 <td style={{ padding: "8px 12px" }}>{l.pemasar}</td>
                 <td style={{ padding: "8px 12px" }}>{l.unit}</td>
                 <td style={{ padding: "8px 12px" }}><StatusBadge status={l.status} /></td>
-                <td style={{ padding: "8px 12px" }}>
-                  <button onClick={() => openEdit(l)} style={{ background: "#F1EFE8", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#3d3d3a" }}>
-                    Follow up
-                  </button>
+                <td style={{ padding: "8px 12px", whiteSpace: "nowrap" }}>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <button onClick={() => openEdit(l)} style={{ background: "#F1EFE8", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#3d3d3a" }}>
+                      Follow up
+                    </button>
+                    {onOpenSimulasi && (
+                      <button
+                        onClick={() => onOpenSimulasi(l)}
+                        title="Buka kalkulator simulasi angsuran untuk prospek ini"
+                        style={{ background: "#E8F5E9", border: "1px solid #C8E6C9", borderRadius: 6, padding: "5px 8px", fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#0A5C36", display: "inline-flex", alignItems: "center", gap: 4 }}
+                      >
+                        <Calculator size={13} /> Simulasi
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -995,7 +1021,22 @@ function AllLeadsPanel({ leads, onUpdate, hideKategori }) {
               <div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: "#2C2C2A" }}>{selected.nama}</div>
               </div>
-              <button onClick={() => setSelectedId(null)} style={{ background: "none", border: "none", color: "#888780", cursor: "pointer", fontSize: 13 }}>Tutup</button>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {onOpenSimulasi && (
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedId(null); onOpenSimulasi(selected); }}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 5,
+                      background: "#E8F5E9", border: "1px solid #A5D6A7", color: "#1B5E20",
+                      borderRadius: 6, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer"
+                    }}
+                  >
+                    <Calculator size={13} /> Hitung Simulasi
+                  </button>
+                )}
+                <button onClick={() => setSelectedId(null)} style={{ background: "none", border: "none", color: "#888780", cursor: "pointer", fontSize: 13 }}>Tutup</button>
+              </div>
             </div>
             <div style={{ fontSize: 13.5, fontWeight: 700, color: "#5F5E5A", marginBottom: 10 }}>No. HP: {selected.phone}</div>
             <div style={{ fontSize: 12, color: "#5F5E5A", whiteSpace: "pre-line", background: "#F8F9FA", borderRadius: 8, padding: 10, marginBottom: 14 }}>
@@ -1788,7 +1829,7 @@ function ReportPanel({ leads }) {
 }
 
 
-function AdminDashboard({ leads, onUpdate }) {
+function AdminDashboard({ leads, onUpdate, onOpenSimulasi }) {
   const [tab, setTab] = useState("Dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const totalLeads = leads.length;
@@ -1884,7 +1925,7 @@ function AdminDashboard({ leads, onUpdate }) {
         {tab === "Dashboard" ? (
           <DashboardOverview leads={leads} onNavigate={setTab} />
         ) : tab === "Semua Prospek" ? (
-          <AllLeadsPanel leads={leads} onUpdate={onUpdate} />
+          <AllLeadsPanel leads={leads} onUpdate={onUpdate} onOpenSimulasi={onOpenSimulasi} />
         ) : tab === "Leaderboard" ? (
           <LeaderboardPanel leads={leads} />
         ) : tab === "Hasil Follow Up" ? (
@@ -1892,7 +1933,7 @@ function AdminDashboard({ leads, onUpdate }) {
         ) : tab === "Laporan" ? (
           <ReportPanel leads={leads} />
         ) : (
-          <CategoryPanel leads={leads} kategori={tab} chartColor={activeTab.color} onUpdate={onUpdate} />
+          <CategoryPanel leads={leads} kategori={tab} chartColor={activeTab.color} onUpdate={onUpdate} onOpenSimulasi={onOpenSimulasi} />
         )}
       </div>
     </div>
@@ -1970,6 +2011,159 @@ function lookupNotarisFidusia(uangPinjaman) {
 
 // --- Tabel & konfigurasi bersama untuk Arrum BPKB & Arrum Multiguna ---
 
+const DISKON_MUNAH_AKAD_TABLE = [
+  { min: 0, rate: 0.9943 },
+  { min: 0.005, rate: 0.9871 },
+  { min: 0.01, rate: 0.98 },
+  { min: 0.015, rate: 0.9729 },
+  { min: 0.02, rate: 0.9657 },
+  { min: 0.025, rate: 0.9586 },
+  { min: 0.03, rate: 0.9514 },
+  { min: 0.035, rate: 0.9443 },
+  { min: 0.04, rate: 0.9371 },
+  { min: 0.045, rate: 0.93 },
+  { min: 0.05, rate: 0.9229 },
+  { min: 0.055, rate: 0.9157 },
+  { min: 0.06, rate: 0.9086 },
+  { min: 0.065, rate: 0.9014 },
+  { min: 0.07, rate: 0.8943 },
+  { min: 0.075, rate: 0.8871 },
+  { min: 0.08, rate: 0.88 },
+  { min: 0.085, rate: 0.8729 },
+  { min: 0.09, rate: 0.8657 },
+  { min: 0.095, rate: 0.8586 },
+  { min: 0.1, rate: 0.8514 },
+  { min: 0.105, rate: 0.8443 },
+  { min: 0.11, rate: 0.8371 },
+  { min: 0.115, rate: 0.83 },
+  { min: 0.12, rate: 0.8229 },
+  { min: 0.125, rate: 0.8157 },
+  { min: 0.13, rate: 0.8086 },
+  { min: 0.135, rate: 0.8014 },
+  { min: 0.14, rate: 0.7943 },
+  { min: 0.145, rate: 0.7871 },
+  { min: 0.15, rate: 0.78 },
+  { min: 0.155, rate: 0.7729 },
+  { min: 0.16, rate: 0.7657 },
+  { min: 0.165, rate: 0.7586 },
+  { min: 0.17, rate: 0.7514 },
+  { min: 0.175, rate: 0.7443 },
+  { min: 0.18, rate: 0.7371 },
+  { min: 0.185, rate: 0.73 },
+  { min: 0.19, rate: 0.7229 },
+  { min: 0.195, rate: 0.7157 },
+  { min: 0.2, rate: 0.7086 },
+  { min: 0.205, rate: 0.7014 },
+  { min: 0.21, rate: 0.6943 },
+  { min: 0.215, rate: 0.6871 },
+  { min: 0.22, rate: 0.68 },
+  { min: 0.225, rate: 0.6729 },
+  { min: 0.23, rate: 0.6657 },
+  { min: 0.235, rate: 0.6586 },
+  { min: 0.24, rate: 0.6514 },
+  { min: 0.245, rate: 0.6443 },
+  { min: 0.25, rate: 0.6371 },
+  { min: 0.255, rate: 0.63 },
+  { min: 0.26, rate: 0.6229 },
+  { min: 0.265, rate: 0.6157 },
+  { min: 0.27, rate: 0.6086 },
+  { min: 0.275, rate: 0.6014 },
+  { min: 0.28, rate: 0.5943 },
+  { min: 0.285, rate: 0.5871 },
+  { min: 0.29, rate: 0.58 },
+  { min: 0.295, rate: 0.5729 },
+  { min: 0.3, rate: 0.5657 },
+  { min: 0.305, rate: 0.5586 },
+  { min: 0.31, rate: 0.5514 },
+  { min: 0.315, rate: 0.5443 },
+  { min: 0.32, rate: 0.5371 },
+  { min: 0.325, rate: 0.53 },
+  { min: 0.33, rate: 0.5229 },
+  { min: 0.335, rate: 0.5157 },
+  { min: 0.34, rate: 0.5086 },
+  { min: 0.345, rate: 0.5014 },
+  { min: 0.35, rate: 0.4943 },
+  { min: 0.355, rate: 0.4871 },
+  { min: 0.36, rate: 0.48 },
+  { min: 0.365, rate: 0.4729 },
+  { min: 0.37, rate: 0.4657 },
+  { min: 0.375, rate: 0.4586 },
+  { min: 0.38, rate: 0.4514 },
+  { min: 0.385, rate: 0.4443 },
+  { min: 0.39, rate: 0.4371 },
+  { min: 0.395, rate: 0.43 },
+  { min: 0.4, rate: 0.4229 },
+  { min: 0.405, rate: 0.4157 },
+  { min: 0.41, rate: 0.4086 },
+  { min: 0.415, rate: 0.4014 },
+  { min: 0.42, rate: 0.3943 },
+  { min: 0.425, rate: 0.3871 },
+  { min: 0.43, rate: 0.38 },
+  { min: 0.435, rate: 0.3729 },
+  { min: 0.44, rate: 0.3657 },
+  { min: 0.445, rate: 0.3586 },
+  { min: 0.45, rate: 0.3514 },
+  { min: 0.455, rate: 0.3443 },
+  { min: 0.46, rate: 0.3371 },
+  { min: 0.465, rate: 0.33 },
+  { min: 0.47, rate: 0.3229 },
+  { min: 0.475, rate: 0.3157 },
+  { min: 0.48, rate: 0.3086 },
+  { min: 0.485, rate: 0.3014 },
+  { min: 0.49, rate: 0.2943 },
+  { min: 0.495, rate: 0.2871 },
+  { min: 0.5, rate: 0.28 },
+  { min: 0.505, rate: 0.2729 },
+  { min: 0.51, rate: 0.2657 },
+  { min: 0.515, rate: 0.2586 },
+  { min: 0.52, rate: 0.2514 },
+  { min: 0.525, rate: 0.2443 },
+  { min: 0.53, rate: 0.2371 },
+  { min: 0.535, rate: 0.23 },
+  { min: 0.54, rate: 0.2229 },
+  { min: 0.545, rate: 0.2157 },
+  { min: 0.55, rate: 0.2086 },
+  { min: 0.555, rate: 0.2014 },
+  { min: 0.56, rate: 0.1943 },
+  { min: 0.565, rate: 0.1871 },
+  { min: 0.57, rate: 0.18 },
+  { min: 0.575, rate: 0.1729 },
+  { min: 0.58, rate: 0.1657 },
+  { min: 0.585, rate: 0.1586 },
+  { min: 0.59, rate: 0.1514 },
+  { min: 0.595, rate: 0.1443 },
+  { min: 0.6, rate: 0.1371 },
+  { min: 0.605, rate: 0.13 },
+  { min: 0.61, rate: 0.1229 },
+  { min: 0.615, rate: 0.1157 },
+  { min: 0.62, rate: 0.1086 },
+  { min: 0.625, rate: 0.1014 },
+  { min: 0.63, rate: 0.0943 },
+  { min: 0.635, rate: 0.0871 },
+  { min: 0.64, rate: 0.08 },
+  { min: 0.645, rate: 0.0729 },
+  { min: 0.65, rate: 0.0657 },
+  { min: 0.655, rate: 0.0586 },
+  { min: 0.66, rate: 0.0514 },
+  { min: 0.665, rate: 0.0443 },
+  { min: 0.67, rate: 0.0371 },
+  { min: 0.675, rate: 0.03 },
+  { min: 0.68, rate: 0.0229 },
+  { min: 0.685, rate: 0.0157 },
+  { min: 0.69, rate: 0.0086 },
+  { min: 0.695, rate: 0 },
+  { min: 0.7001, rate: 0 }
+];
+
+function lookupDiskonMunahAkad(rasio) {
+  if (rasio < 0) return 0;
+  let result = 0;
+  for (const row of DISKON_MUNAH_AKAD_TABLE) {
+    if (row.min <= rasio) result = row.rate; else break;
+  }
+  return result;
+}
+
 const DISKON_MUNAH_TABLE = [
   { min: 0.01, rate: 0.985 }, { min: 0.015, rate: 0.9714 }, { min: 0.025, rate: 0.96 },
   { min: 0.035, rate: 0.94 }, { min: 0.045, rate: 0.93 }, { min: 0.055, rate: 0.91 },
@@ -1982,7 +2176,9 @@ const DISKON_MUNAH_TABLE = [
   { min: 0.505, rate: 0.24 }, { min: 0.535, rate: 0.19 }, { min: 0.575, rate: 0.13 },
   { min: 0.615, rate: 0.07 }, { min: 0.655, rate: 0.015 }, { min: 0.695, rate: 0 },
 ];
+
 function lookupDiskonMunah(rasio) {
+  if (rasio < 0.01) return 0.985;
   let result = 0;
   for (const row of DISKON_MUNAH_TABLE) {
     if (row.min <= rasio) result = row.rate; else break;
@@ -1995,6 +2191,7 @@ const TARIF_MUNAH_TIERING_TABLE = [
   { min: 10000001, rate: 0.00875 },
   { min: 50000001, rate: 0.00805 },
 ];
+
 function lookupTarifMunahTiering(uangPinjaman) {
   let result = 0.00805;
   for (const row of TARIF_MUNAH_TIERING_TABLE) {
@@ -2010,63 +2207,168 @@ function roundUpTo(value, negDigits) {
 
 const AGUNAN_PRODUCTS = {
   arrum_bpkb: {
-    label: "Arrum BPKB",
-    tenors: (up) => (up > 100000000 ? [12, 18, 24, 36, 48, 60] : [12, 18, 24, 36]),
+    label: "Arrum BPKB / Mikro",
+    titleLong: "SIMULASI PENCAIRAN & ANGSURAN - PEGADAIAN ARRUM BPKB / MIKRO",
+    subLabel: "Ketentuan SE No. 3 Tahun 2026 & Juklak Arrum Express Loan",
+    unitKerja: "PEGADAIAN SYARIAH DAAN MOGOT",
+    allTenors: [12, 18, 24, 36, 48, 60],
     asuransiKendaraan: { 12: 0.00375, 18: 0.00438, 24: 0.00531, 36: 0.00662, 48: 0.00796, 60: 0.00924 },
     asuransiJiwa: { 12: 0.01125, 18: 0.01314, 24: 0.01593, 36: 0.01987, 48: 0.02389, 60: 0.02775 },
     asuransiJiwaLabel: "Asuransi Jiwa (Takaful Akhyar)",
     roundTo: -3,
-    munahAkad: (taksiran, up, diskon) => (up > 100000000 ? 250000 : taksiran * 0.007 * (1 - diskon)),
     tarifPemeliharaan: () => 0.007,
-    tarifPemeliharaanLabel: "0,7% x Taksiran (standar)",
+    tarifPemeliharaanLabel: "0,7% x Taksiran / Bulan (Standar)",
     kemampuanBayar: (ctx, tenor) => (2 * ctx.rpc * tenor) / (4.5 * (1 + 0.007 * tenor)),
   },
   arrum_multiguna: {
     label: "Arrum Multiguna",
-    tenors: () => [12, 18, 24, 36],
+    titleLong: "SIMULASI PENCAIRAN & ANGSURAN - PEGADAIAN ARRUM MULTIGUNA",
+    subLabel: "Maksimal Plafon Rp 100 Juta & Tenor s.d. 36 Bulan",
+    unitKerja: "PEGADAIAN SYARIAH DAAN MOGOT",
+    allTenors: [12, 18, 24, 36],
     asuransiKendaraan: { 12: 0.00375, 18: 0.00438, 24: 0.00531, 36: 0.00662 },
     asuransiJiwa: { 12: 0.0113, 18: 0.0143, 24: 0.0193, 36: 0.0238 },
-    asuransiJiwaLabel: "Asuransi Jiwa Multiguna",
+    asuransiJiwaLabel: "Asuransi Jiwa Multiguna (Rate Baru 2026)",
     roundTo: -2,
-    munahAkad: (taksiran) => taksiran * 0.007,
     tarifPemeliharaan: (up) => lookupTarifMunahTiering(up),
-    tarifPemeliharaanLabel: "Tiering sesuai UP",
+    tarifPemeliharaanLabel: "Tiering sesuai UP (0,805% - 1,05%)",
     kemampuanBayar: (ctx, tenor) => tenor * (ctx.rpc * 0.5 - ctx.taksiran * ctx.tarifPemeliharaan * (1 - ctx.diskonMunah)),
   },
 };
 
 function computeAgunanSimulasi(productKey, { rpc, taksiran, up }) {
-  const cfg = AGUNAN_PRODUCTS[productKey];
-  const plafonLtv = taksiran * 0.7;
+  const cfg = AGUNAN_PRODUCTS[productKey] || AGUNAN_PRODUCTS.arrum_bpkb;
+  const isMultiguna = productKey === "arrum_multiguna";
+  const plafonLtv = isMultiguna ? Math.min(taksiran * 0.7, 100000000) : taksiran * 0.7;
   const rasio = taksiran ? up / taksiran : 0;
-  const diskonMunah = lookupDiskonMunah(rasio);
-  const munahAkad = cfg.munahAkad(taksiran, up, diskonMunah);
-  const notarisInfo = lookupNotarisFidusia(up);
+
+  // Diskon & Biaya Mu'nah Akad
+  let diskonMunahAkad = 0;
+  let munahAkad = 0;
+  if (!isMultiguna) {
+    if (up > 100000000) {
+      diskonMunahAkad = 0;
+      munahAkad = 250000;
+    } else {
+      diskonMunahAkad = lookupDiskonMunahAkad(rasio);
+      munahAkad = (taksiran * 0.007) * (1 - diskonMunahAkad);
+    }
+  } else {
+    diskonMunahAkad = 0;
+    munahAkad = taksiran * 0.007;
+  }
+
+  // Diskon & Tarif Mu'nah Pemeliharaan
+  const diskonMunahPemeliharaan = lookupDiskonMunah(rasio);
   const tarifPemeliharaan = cfg.tarifPemeliharaan(up);
   const munahKotor = taksiran * tarifPemeliharaan;
-  const tenors = cfg.tenors(up);
+  const potonganDiskon = munahKotor * diskonMunahPemeliharaan;
+  const munahBersih = munahKotor - potonganDiskon;
+
+  const notarisInfo = lookupNotarisFidusia(up);
+  const tenors = cfg.allTenors;
 
   const perTenor = tenors.map((tenor) => {
+    const isAvailable = !isMultiguna
+      ? (tenor <= 36 || up > 100000000)
+      : (up >= 1000000 && up <= 100000000);
+
+    if (!isAvailable) {
+      return {
+        tenor,
+        isAvailable: false,
+        up: null,
+        munahAkad: null,
+        notaris: null,
+        asuransiKendaraan: null,
+        asuransiJiwa: null,
+        totalPotongan: null,
+        pencairanBersih: null,
+        tarifPemeliharaan: null,
+        munahKotor: null,
+        potonganDiskon: null,
+        munahBersih: null,
+        angsuranPokok: null,
+        totalAngsuran: null,
+        kaliAngsuran: null,
+        dbr: null,
+        layak: false,
+        statusDbr: !isMultiguna
+          ? "N/A (UP <= 100Jt)"
+          : (up > 100000000 ? "MELEBIHI PLAFON MULTIGUNA (MAKS. 100JT)" : "DI BAWAH MINIMAL PRODUK (MIN. 1JT)"),
+        plafonAgunan: null,
+        kemampuanBayar: null,
+        pinjamanRekomendasi: null,
+        memenuhi: false,
+        statusRekomendasi: !isMultiguna
+          ? "TENOR TIDAK TERSEDIA (UP <= 100Jt)"
+          : (up > 100000000 ? "MELEBIHI PLAFON MULTIGUNA (MAKS. 100JT)" : "DI BAWAH MINIMAL PRODUK (MIN. 1JT)"),
+      };
+    }
+
     const asuransiKendaraan = up * (cfg.asuransiKendaraan[tenor] || 0);
     const asuransiJiwa = up * (cfg.asuransiJiwa[tenor] || 0);
     const totalPotongan = munahAkad + notarisInfo.biaya + asuransiKendaraan + asuransiJiwa;
     const pencairanBersih = up - totalPotongan;
-    const potonganDiskon = munahKotor * diskonMunah;
-    const munahBersih = munahKotor - potonganDiskon;
     const angsuranPokok = tenor ? up / tenor : 0;
     const totalAngsuran = roundUpTo(munahBersih + angsuranPokok, cfg.roundTo);
+    const kaliAngsuran = totalAngsuran && rpc ? rpc / totalAngsuran : 0;
     const dbr = rpc ? totalAngsuran / rpc : 0;
-    const layak = dbr <= 0.4;
-    const kemampuanBayar = cfg.kemampuanBayar({ rpc, taksiran, up, tarifPemeliharaan, diskonMunah }, tenor);
-    const pinjamanRekomendasi = Math.min(plafonLtv, kemampuanBayar);
+    const layak = dbr <= 0.40;
+    const statusDbr = layak ? "LAYAK (OK)" : "MELEBIHI LIMIT";
+
+    const kemampuanBayar = cfg.kemampuanBayar({ rpc, taksiran, up, tarifPemeliharaan, diskonMunah: diskonMunahPemeliharaan }, tenor);
+    const pinjamanRekomendasi = isMultiguna
+      ? Math.min(plafonLtv, kemampuanBayar, 100000000)
+      : Math.min(plafonLtv, kemampuanBayar);
     const memenuhi = up <= pinjamanRekomendasi;
-    return { tenor, asuransiKendaraan, asuransiJiwa, notaris: notarisInfo.biaya, munahAkad, totalPotongan, pencairanBersih, angsuranPokok, munahBersih, totalAngsuran, dbr, layak, kemampuanBayar, pinjamanRekomendasi, memenuhi };
+    const statusRekomendasi = memenuhi ? "MEMENUHI REKOMENDASI" : "MELEBIHI REKOMENDASI";
+
+    return {
+      tenor,
+      isAvailable: true,
+      up,
+      asuransiKendaraan,
+      asuransiJiwa,
+      notaris: notarisInfo.biaya,
+      munahAkad,
+      totalPotongan,
+      pencairanBersih,
+      tarifPemeliharaan,
+      munahKotor,
+      potonganDiskon,
+      angsuranPokok,
+      munahBersih,
+      totalAngsuran,
+      kaliAngsuran,
+      dbr,
+      layak,
+      statusDbr,
+      plafonAgunan: plafonLtv,
+      kemampuanBayar,
+      pinjamanRekomendasi,
+      memenuhi,
+      statusRekomendasi,
+    };
   });
 
-  return { plafonLtv, rasio, diskonMunah, munahAkad, notarisInfo, tarifPemeliharaan, munahKotor, perTenor };
+  return {
+    plafonLtv,
+    rasio,
+    diskonMunahAkad,
+    munahAkad,
+    diskonMunahPemeliharaan,
+    tarifPemeliharaan,
+    munahKotor,
+    potonganDiskon,
+    munahBersih,
+    notarisInfo,
+    perTenor,
+  };
 }
 
 function formatRupiah(n) {
+  if (n === null || n === undefined || isNaN(n)) return "-";
   return "Rp " + Math.round(n || 0).toLocaleString("id-ID");
 }
 
@@ -2146,15 +2448,14 @@ const SIMULASI_TABLE_ROWS = [
   { key: "angsuran", label: "Angsuran / Bulan", highlight: true },
 ];
 
-
 function computeSimulasi(mode, hargaOtr, uangPinjamanInput) {
   const otr = Number(hargaOtr) || 0;
   const uangPinjaman = Number(uangPinjamanInput) || 0;
 
-  const dpKendaraan = otr - uangPinjaman; // E3
-  const rasio = otr ? Math.round((uangPinjaman / otr * 100) * 100) / 100 : 0; // E4
-  const diskonUjrah = rasio === 90 ? 0 : SIMULASI_DISKON_UJRAH_RATE; // E5
-  const notarisInfo = lookupNotarisFidusia(uangPinjaman); // E6
+  const dpKendaraan = otr - uangPinjaman;
+  const rasio = otr ? Math.round((uangPinjaman / otr * 100) * 100) / 100 : 0;
+  const diskonUjrah = rasio === 90 ? 0 : SIMULASI_DISKON_UJRAH_RATE;
+  const notarisInfo = lookupNotarisFidusia(uangPinjaman);
   const sewaModalRate = SIMULASI_SEWA_MODAL[mode];
   const ijkRates = SIMULASI_IJK_RATE[mode];
 
@@ -2163,7 +2464,7 @@ function computeSimulasi(mode, hargaOtr, uangPinjamanInput) {
     const ijk = uangPinjaman * ijkRates[tenor];
     const totalDpAdmin = dpKendaraan + tlo + ijk + SIMULASI_ADMINISTRASI + notarisInfo.biaya;
     const angsuranRaw = (tenor ? uangPinjaman / tenor : 0) + (otr * sewaModalRate * (1 - diskonUjrah));
-    const angsuran = Math.ceil(angsuranRaw / 1000) * 1000; // ROUNDUP(...,-3)
+    const angsuran = Math.ceil(angsuranRaw / 1000) * 1000;
     return { tenor, tlo, ijk, administrasi: SIMULASI_ADMINISTRASI, notaris: notarisInfo.biaya, totalDpAdmin, angsuran };
   });
 
@@ -2172,13 +2473,13 @@ function computeSimulasi(mode, hargaOtr, uangPinjamanInput) {
 
 function suggestedInternalUP(hargaOtr) {
   const otr = Number(hargaOtr) || 0;
-  const alt90 = otr - otr * 0.1; // C5: 90% dari OTR
-  return Math.floor(alt90 / 100000) * 100000; // ROUNDDOWN(C5,-5)
+  const alt90 = otr - otr * 0.1;
+  return Math.floor(alt90 / 100000) * 100000;
 }
 
-function AmanahCalculator() {
+function AmanahCalculator({ prefill }) {
   const [mode, setModeRaw] = useState("eksternal");
-  const [namaMotor, setNamaMotor] = useState("");
+  const [namaMotor, setNamaMotor] = useState(prefill?.nama ? `Unit prospek ${prefill.nama}` : "");
   const [hargaOtr, setHargaOtr] = useState("");
   const [uangPinjamanInput, setUangPinjamanInput] = useState("");
 
@@ -2274,7 +2575,7 @@ function AmanahCalculator() {
 </style></head>
 <body>
   <h1>Ringkasan Simulasi Amanah</h1>
-  <div class="sub">Nama Motor: ${namaMotor || "-"}</div>
+  <div class="sub">Nama Motor: ${escapeHtml(namaMotor || "-")}</div>
   <div class="sub">Harga Motor / OTR: ${formatRupiah(otrNum)}</div>
   <div class="sub">Uang Pinjaman: ${formatRupiah(result.uangPinjaman)}</div>
   <table>
@@ -2391,42 +2692,74 @@ function AmanahCalculator() {
   );
 }
 
-
 function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-function AgunanCalculator({ productKey }) {
-  const cfg = AGUNAN_PRODUCTS[productKey];
-  const [nama, setNama] = useState("");
-  const [rpc, setRpc] = useState("");
-  const [taksiran, setTaksiran] = useState("");
-  const [up, setUp] = useState("");
+function AgunanCalculator({ productKey, prefill }) {
+  const cfg = AGUNAN_PRODUCTS[productKey] || AGUNAN_PRODUCTS.arrum_bpkb;
+  const isMultiguna = productKey === "arrum_multiguna";
+
+  const [nama, setNama] = useState(prefill?.nama || "Bapak Ahmad");
+  const [rpc, setRpc] = useState(prefill?.rpc ? String(prefill.rpc) : "15000000");
+  const [taksiran, setTaksiran] = useState(prefill?.taksiran ? String(prefill.taksiran) : "100000000");
+  const [up, setUp] = useState(prefill?.up ? String(prefill.up) : "70000000");
+  const [copiedWa, setCopiedWa] = useState(false);
+
+  useEffect(() => {
+    if (prefill?.nama) setNama(prefill.nama);
+    if (prefill?.rpc) setRpc(String(prefill.rpc));
+    if (prefill?.taksiran) setTaksiran(String(prefill.taksiran));
+    if (prefill?.up) setUp(String(prefill.up));
+  }, [prefill]);
 
   const rpcNum = Number(rpc) || 0;
   const taksiranNum = Number(taksiran) || 0;
   const upNum = Number(up) || 0;
-  const suggestedUP = Math.floor((taksiranNum * 0.7) / 100000) * 100000;
+
+  const rawSuggestedUP = taksiranNum * 0.7;
+  const maxCap = isMultiguna ? 100000000 : Infinity;
+  const suggestedUP = Math.floor(Math.min(rawSuggestedUP, maxCap) / 100000) * 100000;
+
   const result = useMemo(
     () => computeAgunanSimulasi(productKey, { rpc: rpcNum, taksiran: taksiranNum, up: upNum }),
     [productKey, rpcNum, taksiranNum, upNum]
   );
 
+  const loadExampleData = () => {
+    setNama("Bapak Ahmad");
+    setRpc("15000000");
+    setTaksiran("100000000");
+    setUp("70000000");
+  };
+
+  const handleReset = () => {
+    setNama("");
+    setRpc("");
+    setTaksiran("");
+    setUp("");
+  };
+
+  // Baris-baris komponen pencairan & angsuran
   const moneyRows = [
-    { key: "up", label: "Uang Pinjaman (UP)", get: () => upNum },
-    { key: "munahAkad", label: "Administrasi (Mu'nah Akad)", get: (r) => r.munahAkad },
-    { key: "notaris", label: `Biaya ${result.notarisInfo.jenis}`, get: (r) => r.notaris },
-    { key: "asuransiKendaraan", label: "Asuransi Kendaraan", get: (r) => r.asuransiKendaraan },
+    { key: "up", label: "Uang Pinjaman / Marhun Bih (UP)", get: (r) => r.up },
+    { key: "munahAkad", label: "Biaya Administrasi / Mu'nah Akad", get: (r) => r.munahAkad },
+    { key: "notaris", label: `Biaya Notaris / Legalisasi / Fidusia (${result.notarisInfo.jenis})`, get: (r) => r.notaris },
+    { key: "asuransiKendaraan", label: `Biaya Asuransi Kendaraan (${isMultiguna ? "Arrum" : "Arrum BPKB"})`, get: (r) => r.asuransiKendaraan },
     { key: "asuransiJiwa", label: cfg.asuransiJiwaLabel, get: (r) => r.asuransiJiwa },
     { key: "totalPotongan", label: "Total Biaya Potongan Pencairan", get: (r) => r.totalPotongan, total: true },
-    { key: "pencairanBersih", label: "Pencairan Bersih (NET)", get: (r) => r.pencairanBersih, highlight: true },
-    { key: "angsuranPokok", label: "Angsuran Pokok / Bulan", get: (r) => r.angsuranPokok },
-    { key: "munahBersih", label: "Mu'nah Pemeliharaan Bersih / Bulan", get: (r) => r.munahBersih },
-    { key: "totalAngsuran", label: "Total Angsuran / Bulan", get: (r) => r.totalAngsuran, highlight: true },
+    { key: "pencairanBersih", label: "PENCAIRAN BERSIH DITERIMA NASABAH (NET)", get: (r) => r.pencairanBersih, highlight: true },
+    { key: "tarifPemeliharaan", label: "Tarif Mu'nah Pemeliharaan Standar (%)", get: (r) => r.isAvailable ? (r.tarifPemeliharaan * 100).toFixed(2) + "%" : "-", isRaw: true },
+    { key: "munahKotor", label: "Mu'nah Pemeliharaan Kotor / Bulan (Sebelum Diskon)", get: (r) => r.munahKotor },
+    { key: "potonganDiskon", label: "Potongan Diskon Mu'nah Pemeliharaan / Bulan (Rp)", get: (r) => r.potonganDiskon },
+    { key: "munahBersih", label: "Mu'nah Pemeliharaan BERSIH / Bulan (Setelah Diskon)", get: (r) => r.munahBersih },
+    { key: "angsuranPokok", label: "Angsuran Pokok / Bulan (Rp)", get: (r) => r.angsuranPokok },
+    { key: "totalAngsuran", label: isMultiguna ? "TOTAL ANGSURAN PER BULAN (ROUNDUP 100)" : "TOTAL ANGSURAN PER BULAN (ROUNDUP 1000)", get: (r) => r.totalAngsuran, highlight: true },
   ];
 
+  // Baris untuk lembar cetak nasabah (Sheet 3)
   const customerRows = [
-    { label: "Uang Pinjaman / Marhun Bih (UP)", get: () => upNum },
+    { label: "Uang Pinjaman / Marhun Bih (UP)", get: (r) => r.up },
     { label: "Total Biaya Potongan Pencairan", get: (r) => r.totalPotongan },
     { label: "PENCAIRAN BERSIH DITERIMA (NET)", get: (r) => r.pencairanBersih, strong: true },
     { label: "Angsuran Pokok / Bulan", get: (r) => r.angsuranPokok },
@@ -2436,15 +2769,50 @@ function AgunanCalculator({ productKey }) {
 
   const tanggalCetak = () => new Date().toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" });
 
+  const handleCopyWa = () => {
+    const activeTenors = result.perTenor.filter((r) => r.isAvailable);
+    const text = `*SIMULASI PENCAIRAN & ANGSURAN NASABAH*
+*PEGADAIAN SYARIAH DAAN MOGOT*
+_${cfg.titleLong}_
+_${cfg.subLabel}_
+--------------------------------------------------
+*Nama Calon Rahin:* ${nama || "-"}
+*Pendapatan Bersih (RPC):* ${formatRupiah(rpcNum)}
+*Nilai Taksiran Agunan:* ${formatRupiah(taksiranNum)}
+*Uang Pinjaman (UP):* ${formatRupiah(upNum)}
+*Maksimal Plafon LTV 70%:* ${formatRupiah(result.plafonLtv)}
+*Diskon Mu'nah Akad:* ${(result.diskonMunahAkad * 100).toFixed(2)}%
+*Biaya Mu'nah Akad:* ${formatRupiah(result.munahAkad)}
+*Biaya ${result.notarisInfo.jenis}:* ${formatRupiah(result.notarisInfo.biaya)}
+
+*RINGKASAN ESTIMASI PENCAIRAN BERSIH & ANGSURAN:*
+${activeTenors.map((r) => `• *Tenor ${r.tenor} Bulan:*
+   - Total Biaya Potongan: ${formatRupiah(r.totalPotongan)}
+   - Pencairan Bersih (NET): ${formatRupiah(r.pencairanBersih)}
+   - Angsuran Pokok: ${formatRupiah(r.angsuranPokok)}/bln
+   - Mu'nah Pemeliharaan Bersih: ${formatRupiah(r.munahBersih)}/bln
+   - *TOTAL ANGSURAN: ${formatRupiah(r.totalAngsuran)}/bln*
+   - Status DBR (Maks. 40% RPC): ${r.statusDbr}
+   - Status Plafon Rekomendasi: ${r.statusRekomendasi}`).join("\n\n")}
+
+_Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah mengikuti ketentuan/approval resmi yang berlaku di Pegadaian Syariah._`;
+
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(text);
+      setCopiedWa(true);
+      setTimeout(() => setCopiedWa(false), 3000);
+    }
+  };
+
   const handleDownloadPng = () => {
     const tenorCount = result.perTenor.length;
-    const labelW = 230;
-    const colW = 92;
+    const labelW = 240;
+    const colW = 95;
     const padding = 24;
     const rowH = 28;
     const width = labelW + colW * tenorCount;
     const canvasWidth = width + padding * 2;
-    const canvasHeight = 150 + 34 + customerRows.length * rowH + 60;
+    const canvasHeight = 160 + 34 + customerRows.length * rowH + 60;
 
     const canvas = document.createElement("canvas");
     const scale = 2;
@@ -2458,22 +2826,25 @@ function AgunanCalculator({ productKey }) {
     ctx.fillStyle = "#123530";
     ctx.font = "bold 16px Georgia, serif";
     ctx.fillText("PEGADAIAN SYARIAH DAAN MOGOT", padding, 30);
-    ctx.font = "13px Arial, sans-serif";
+    ctx.font = "12.5px Arial, sans-serif";
     ctx.fillStyle = "#3F5A54";
-    ctx.fillText(`Simulasi Pencairan & Angsuran Nasabah - ${cfg.label}`, padding, 50);
+    ctx.fillText(`Simulasi Pencairan & Angsuran Nasabah - ${cfg.label}`, padding, 48);
+    ctx.font = "10.5px Arial, sans-serif";
+    ctx.fillStyle = "#6F837D";
+    ctx.fillText(cfg.subLabel, padding, 64);
 
-    ctx.font = "12px Arial, sans-serif";
+    ctx.font = "11.5px Arial, sans-serif";
     ctx.fillStyle = "#16302C";
-    ctx.fillText(`Nama Calon Rahin: ${nama || "-"}`, padding, 76);
-    ctx.fillText(`Nilai Taksiran Agunan: ${formatRupiah(taksiranNum)}`, padding, 94);
-    ctx.fillText(`Uang Pinjaman Disetujui: ${formatRupiah(upNum)}`, padding, 112);
-    ctx.fillText(`Tanggal Simulasi: ${tanggalCetak()}`, padding, 130);
+    ctx.fillText(`Nama Calon Rahin (Nasabah): ${nama || "-"}`, padding, 88);
+    ctx.fillText(`Nilai Taksiran Agunan / Kendaraan: ${formatRupiah(taksiranNum)}`, padding, 106);
+    ctx.fillText(`Uang Pinjaman Disetujui (Marhun Bih): ${formatRupiah(upNum)}`, padding, 124);
+    ctx.fillText(`Tanggal Simulasi Cetak: ${tanggalCetak()}`, padding, 142);
 
-    let y = 150;
+    let y = 160;
     ctx.fillStyle = "#F6F3EA";
     ctx.fillRect(padding, y, width, 30);
     ctx.fillStyle = "#3F5A54";
-    ctx.font = "bold 11.5px Arial, sans-serif";
+    ctx.font = "bold 11px Arial, sans-serif";
     ctx.textAlign = "left";
     ctx.fillText("Rincian Komponen / Tenor", padding + 8, y + 19);
     ctx.textAlign = "right";
@@ -2482,7 +2853,7 @@ function AgunanCalculator({ productKey }) {
     });
     y += 30;
 
-    customerRows.forEach((row, idx) => {
+    customerRows.forEach((row) => {
       if (row.strong) {
         ctx.fillStyle = "#EEF6F0";
         ctx.fillRect(padding, y, width, rowH);
@@ -2494,23 +2865,24 @@ function AgunanCalculator({ productKey }) {
       ctx.lineTo(padding + width, y + rowH);
       ctx.stroke();
       ctx.fillStyle = row.strong ? "#2F6F4F" : "#16302C";
-      ctx.font = `${row.strong ? "bold " : ""}11.5px Arial, sans-serif`;
+      ctx.font = `${row.strong ? "bold " : ""}11px Arial, sans-serif`;
       ctx.textAlign = "left";
       ctx.fillText(row.label, padding + 8, y + 18);
       ctx.textAlign = "right";
       result.perTenor.forEach((r, i) => {
-        ctx.fillText(formatRupiah(row.get(r)), padding + labelW + colW * (i + 1) - 8, y + 18);
+        const valText = r.isAvailable ? formatRupiah(row.get(r)) : "-";
+        ctx.fillText(valText, padding + labelW + colW * (i + 1) - 8, y + 18);
       });
       y += rowH;
     });
 
     ctx.textAlign = "left";
     ctx.fillStyle = "#3F5A54";
-    ctx.font = "10.5px Arial, sans-serif";
+    ctx.font = "10px Arial, sans-serif";
     ctx.fillText("Catatan: rincian ini bersifat simulasi dan dapat berubah mengikuti ketentuan tarif/approval yang berlaku.", padding, y + 26);
 
     const link = document.createElement("a");
-    link.download = `simulasi-${productKey}-${todayStr()}.png`;
+    link.download = `simulasi-${productKey}-${nama ? nama.replace(/\s+/g, "_").toLowerCase() : "nasabah"}-${todayStr()}.png`;
     link.href = canvas.toDataURL("image/png");
     link.click();
   };
@@ -2518,38 +2890,77 @@ function AgunanCalculator({ productKey }) {
   const handleDownloadPdf = () => {
     const headCells = result.perTenor.map((r) => `<th>${r.tenor} Bulan</th>`).join("");
     const bodyRows = customerRows
-      .map((row) => `<tr class="${row.strong ? "strong" : ""}"><td>${escapeHtml(row.label)}</td>${result.perTenor.map((r) => `<td>${formatRupiah(row.get(r))}</td>`).join("")}</tr>`)
+      .map((row) => {
+        const cells = result.perTenor.map((r) => `<td>${r.isAvailable ? formatRupiah(row.get(r)) : "-"}</td>`).join("");
+        return `<tr class="${row.strong ? "strong" : ""}"><td>${escapeHtml(row.label)}</td>${cells}</tr>`;
+      })
       .join("");
+
     const html = `<!doctype html>
 <html lang="id"><head><meta charset="utf-8" />
 <title>Simulasi ${escapeHtml(cfg.label)}</title>
 <style>
-  @page { margin: 18mm 14mm; }
+  @page { margin: 16mm 14mm; }
   body { font-family: Georgia, 'Iowan Old Style', serif; color: #16302C; padding: 12px; }
   h1 { font-size: 18px; color: #123530; margin: 0 0 2px; }
-  .sub { font-family: Arial, sans-serif; font-size: 12px; color: #3F5A54; margin-bottom: 4px; }
-  h2 { font-family: Arial, sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #B5872B; margin: 20px 0 8px; }
-  table { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 12px; }
-  th { text-align: right; padding: 8px; color: #3F5A54; font-size: 11px; border-bottom: 2px solid #123530; }
+  .sub { font-family: Arial, sans-serif; font-size: 11.5px; color: #3F5A54; margin-bottom: 2px; }
+  .ketentuan { font-family: Arial, sans-serif; font-size: 10px; color: #6F837D; margin-bottom: 12px; }
+  h2 { font-family: Arial, sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #B5872B; margin: 16px 0 6px; }
+  table { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11.5px; }
+  th { text-align: right; padding: 7px 8px; color: #3F5A54; font-size: 11px; border-bottom: 2px solid #123530; }
   th:first-child, td:first-child { text-align: left; }
-  td { text-align: right; padding: 8px; border-bottom: 1px solid #DCD4C0; }
+  td { text-align: right; padding: 7px 8px; border-bottom: 1px solid #DCD4C0; }
   tr.strong td { font-weight: 700; color: #2F6F4F; background: #EEF6F0; }
-  .note { font-family: Arial, sans-serif; font-size: 11px; color: #3F5A54; margin-top: 14px; padding-top: 10px; border-top: 1px dashed #DCD4C0; }
+  tr.rekomendasi td { font-weight: 700; color: #1E5E2C; background: #E2F0D9; }
+  .note { font-family: Arial, sans-serif; font-size: 10.5px; color: #3F5A54; margin-top: 14px; padding-top: 8px; border-top: 1px dashed #DCD4C0; }
 </style></head>
 <body>
   <h1>PEGADAIAN SYARIAH DAAN MOGOT</h1>
   <div class="sub">Simulasi Pencairan &amp; Angsuran Nasabah - ${escapeHtml(cfg.label)}</div>
+  <div class="ketentuan">${escapeHtml(cfg.subLabel)}</div>
+  
   <h2>I. Informasi Calon Rahin (Nasabah) &amp; Agunan</h2>
-  <div class="sub">Nama Calon Rahin: <strong>${escapeHtml(nama || "-")}</strong></div>
+  <div class="sub">Nama Calon Rahin (Nasabah): <strong>${escapeHtml(nama || "-")}</strong></div>
+  <div class="sub">Pendapatan Bersih / RPC: <strong>${formatRupiah(rpcNum)}</strong></div>
   <div class="sub">Nilai Taksiran Agunan / Kendaraan: <strong>${formatRupiah(taksiranNum)}</strong></div>
   <div class="sub">Uang Pinjaman Disetujui (Marhun Bih): <strong>${formatRupiah(upNum)}</strong></div>
   <div class="sub">Tanggal Simulasi Cetak: ${tanggalCetak()}</div>
+
   <h2>II. Ringkasan Estimasi Pencairan Bersih &amp; Angsuran Bulanan</h2>
   <table>
-    <tr><th>Rincian Komponen / Tenor</th>${headCells}</tr>
-    ${bodyRows}
+    <thead>
+      <tr><th>Rincian Komponen / Tenor</th>${headCells}</tr>
+    </thead>
+    <tbody>
+      ${bodyRows}
+    </tbody>
   </table>
-  <div class="note">Catatan: rincian ini bersifat simulasi dan dapat berubah mengikuti ketentuan tarif/approval yang berlaku.</div>
+
+  <h2>III. Analisis Pinjaman Rekomendasi Maksimal</h2>
+  <table>
+    <thead>
+      <tr><th>Komponen Rekomendasi / Tenor</th>${headCells}</tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>${escapeHtml(isMultiguna ? "Plafon Maksimal Agunan (LTV 70% Taksiran, Maks. 100Jt)" : "Plafon Maksimal Agunan (LTV 70% Taksiran)")}</td>
+        ${result.perTenor.map((r) => `<td>${r.isAvailable ? formatRupiah(result.plafonLtv) : "-"}</td>`).join("")}
+      </tr>
+      <tr>
+        <td>Plafon Maksimal Kemampuan Membayar (RPC)</td>
+        ${result.perTenor.map((r) => `<td>${!r.isAvailable ? "-" : rpcNum ? formatRupiah(r.kemampuanBayar) : "-"}</td>`).join("")}
+      </tr>
+      <tr class="rekomendasi">
+        <td>${escapeHtml(isMultiguna ? "PINJAMAN REKOMENDASI MAKSIMAL (TERKECIL LTV/RPC/100JT)" : "PINJAMAN REKOMENDASI MAKSIMAL (TERKECIL LTV/RPC)")}</td>
+        ${result.perTenor.map((r) => `<td>${!r.isAvailable ? "-" : rpcNum ? formatRupiah(r.pinjamanRekomendasi) : formatRupiah(result.plafonLtv)}</td>`).join("")}
+      </tr>
+      <tr>
+        <td>Status Pengajuan UP (vs Plafon Rekomendasi)</td>
+        ${result.perTenor.map((r) => `<td style="font-weight:700;color:${r.memenuhi ? "#1E5E2C" : "#A32D2D"};">${!r.isAvailable ? escapeHtml(r.statusRekomendasi) : (!rpcNum || !upNum ? "-" : escapeHtml(r.statusRekomendasi))}</td>`).join("")}
+      </tr>
+    </tbody>
+  </table>
+  <div class="note">Catatan: rincian ini bersifat simulasi dan dapat berubah mengikuti ketentuan tarif/approval yang berlaku di Pegadaian Syariah.</div>
 </body></html>`;
 
     const win = window.open("", "_blank");
@@ -2562,168 +2973,330 @@ function AgunanCalculator({ productKey }) {
   };
 
   const overLtv = taksiranNum > 0 && upNum > result.plafonLtv;
+  const overCapMultiguna = isMultiguna && upNum > 100000000;
+  const underMinMultiguna = isMultiguna && upNum > 0 && upNum < 1000000;
 
   return (
     <div className="simulator-panel" style={{ fontFamily: "Georgia, 'Iowan Old Style', serif", color: "#16302C" }}>
       <div className="simulator-header" style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16, borderBottom: "2px solid #123530", paddingBottom: 14, marginBottom: 22, flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontSize: 27, fontWeight: 700, color: "#123530", letterSpacing: 0.2 }}>Simulasi {cfg.label}</div>
-          <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13, color: "#3F5A54", marginTop: 2 }}>Kalkulator simulasi pencairan &amp; angsuran ({cfg.tenors.join("/")} bulan)</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 26, fontWeight: 700, color: "#123530", letterSpacing: 0.2 }}>Simulasi {cfg.label}</span>
+            <span style={{ background: "#E8F5E9", color: "#1B5E20", fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 999, border: "1px solid #C8E6C9" }}>
+              {cfg.unitKerja}
+            </span>
+          </div>
+          <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12.5, color: "#3F5A54", marginTop: 3 }}>
+            {cfg.subLabel}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button
+            onClick={loadExampleData}
+            style={{
+              fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12.5, fontWeight: 600,
+              padding: "7px 14px", borderRadius: 6, border: "1px solid #B5872B", background: "#FFF9E6", color: "#854F0B", cursor: "pointer"
+            }}
+          >
+            Muat Contoh SE 2026 (Bpk Ahmad)
+          </button>
+          <button
+            onClick={handleReset}
+            style={{
+              fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12.5, fontWeight: 500,
+              padding: "7px 12px", borderRadius: 6, border: "1px solid #DCD4C0", background: "#fff", color: "#5F5E5A", cursor: "pointer"
+            }}
+          >
+            Reset
+          </button>
         </div>
       </div>
 
+      {/* 1. Parameter Input Simulasi */}
       <div className="simulator-data-card" style={{ background: "#fff", border: "1px solid #DCD4C0", borderRadius: 10, padding: 22, marginBottom: 20 }}>
-        <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 1, color: "#B5872B", marginBottom: 16, fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: 700 }}>Data Nasabah &amp; Agunan</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 1, color: "#B5872B", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: 700 }}>
+            1. Parameter Input Simulasi Nasabah &amp; Agunan
+          </div>
+          {prefill?.nama && (
+            <span style={{ fontSize: 11.5, background: "#E8F5E9", color: "#1B5E20", padding: "2px 8px", borderRadius: 4, fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
+              Terkait Lead: {prefill.nama}
+            </span>
+          )}
+        </div>
+
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           <div style={{ gridColumn: "span 2" }}>
             <label style={simLabelStyle}>Nama Calon Rahin (Nasabah)</label>
-            <input style={simFieldStyle} value={nama} onChange={(e) => setNama(e.target.value)} placeholder="Nama nasabah" />
+            <input style={simFieldStyle} value={nama} onChange={(e) => setNama(e.target.value)} placeholder="Contoh: Bapak Ahmad" />
           </div>
           <div>
-            <label style={simLabelStyle}>Pendapatan Bersih Bulanan (Rp)</label>
-            <input type="number" style={simFieldStyle} value={rpc} onChange={(e) => setRpc(e.target.value)} placeholder="Contoh: 8000000" />
+            <label style={simLabelStyle}>Pendapatan Bersih Bulanan / RPC (Rp)</label>
+            <input type="number" style={simFieldStyle} value={rpc} onChange={(e) => setRpc(e.target.value)} placeholder="Contoh: 15000000" />
+            <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 11, color: "#5F5E5A", marginTop: 4 }}>
+              Digunakan untuk analisis kemampuan bayar &amp; rasio DBR (maks. 40%).
+            </div>
           </div>
           <div>
-            <label style={simLabelStyle}>Nilai Taksiran Agunan (Rp)</label>
-            <input type="number" style={simFieldStyle} value={taksiran} onChange={(e) => setTaksiran(e.target.value)} placeholder="Contoh: 50000000" />
+            <label style={simLabelStyle}>Nilai Taksiran Agunan / Kendaraan (Rp)</label>
+            <input type="number" style={simFieldStyle} value={taksiran} onChange={(e) => setTaksiran(e.target.value)} placeholder="Contoh: 100000000" />
+            <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 11, color: "#5F5E5A", marginTop: 4 }}>
+              Dasar perhitungan plafon LTV 70% dan Mu'nah Pemeliharaan.
+            </div>
           </div>
           <div style={{ gridColumn: "span 2" }}>
-            <label style={simLabelStyle}>Uang Pinjaman / Marhun Bih (Rp)</label>
-            <input type="number" style={simFieldStyle} value={up} onChange={(e) => setUp(e.target.value)} placeholder="Contoh: 30000000" />
-            <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 11, color: "#3F5A54", marginTop: 5 }}>
-              Saran plafon maksimal (LTV 70%, dibulatkan ke bawah): {formatRupiah(suggestedUP)}.{" "}
-              <button
-                onClick={() => setUp(String(suggestedUP))}
-                style={{ border: "none", background: "none", color: "#1F4D43", cursor: "pointer", fontSize: 11, textDecoration: "underline", padding: 0, fontFamily: "inherit" }}
-              >
-                Gunakan saran
-              </button>
+            <label style={simLabelStyle}>Uang Pinjaman / Marhun Bih (UP) (Rp)</label>
+            <input type="number" style={simFieldStyle} value={up} onChange={(e) => setUp(e.target.value)} placeholder="Contoh: 70000000" />
+            <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 11.5, color: "#3F5A54", marginTop: 5 }}>
+              Maksimal Plafon LTV 70%: <strong>{formatRupiah(result.plafonLtv)}</strong>.{" "}
+              {taksiranNum > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setUp(String(suggestedUP))}
+                  style={{ border: "none", background: "none", color: "#1F4D43", cursor: "pointer", fontSize: 11.5, textDecoration: "underline", padding: 0, fontWeight: 600, fontFamily: "inherit" }}
+                >
+                  Gunakan rekomendasi plafon ({formatRupiah(suggestedUP)})
+                </button>
+              )}
             </div>
             {overLtv && (
-              <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 11.5, color: "#A32D2D", marginTop: 5, fontWeight: 600 }}>
-                Uang pinjaman melebihi plafon LTV 70% ({formatRupiah(result.plafonLtv)}).
+              <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12, color: "#A32D2D", marginTop: 5, fontWeight: 600 }}>
+                Peringatan: Uang pinjaman melebihi batas plafon LTV 70% ({formatRupiah(result.plafonLtv)}).
+              </div>
+            )}
+            {overCapMultiguna && (
+              <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12, color: "#A32D2D", marginTop: 5, fontWeight: 600 }}>
+                Peringatan: Arrum Multiguna memiliki batas maksimal pinjaman Rp 100.000.000.
+              </div>
+            )}
+            {underMinMultiguna && (
+              <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12, color: "#A32D2D", marginTop: 5, fontWeight: 600 }}>
+                Peringatan: Uang pinjaman di bawah minimal produk Arrum Multiguna (Min. Rp 1.000.000).
               </div>
             )}
           </div>
         </div>
 
-        <div className="simulator-metrics" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginTop: 18 }}>
+        {/* 6 Metric Cards sesuai parameter SE 2026 */}
+        <div className="simulator-metrics" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginTop: 20 }}>
           <div style={simMetricCardStyle}>
-            <div style={simMetricKStyle}>Maks. Plafon LTV 70%</div>
+            <div style={simMetricKStyle}>Maksimal Plafon LTV 70%</div>
             <div style={simMetricVStyle}>{formatRupiah(result.plafonLtv)}</div>
+            <div style={{ fontSize: 11, color: "#6F837D", marginTop: 2 }}>{isMultiguna ? "LTV 70% (Maks. 100 Jt)" : "70% dari nilai taksiran"}</div>
           </div>
           <div style={simMetricCardStyle}>
-            <div style={simMetricKStyle}>Rasio UP / Taksiran</div>
+            <div style={simMetricKStyle}>Rasio UP terhadap Taksiran</div>
             <div style={simMetricVStyle}>{(result.rasio * 100).toFixed(2)}%</div>
+            <div style={{ fontSize: 11, color: "#6F837D", marginTop: 2 }}>Dasar tiering diskon mu'nah</div>
+          </div>
+          <div style={simMetricCardStyle}>
+            <div style={simMetricKStyle}>Diskon Mu'nah Akad</div>
+            <div style={simMetricVStyle}>{(result.diskonMunahAkad * 100).toFixed(2)}%</div>
+            <div style={{ fontSize: 11, color: "#6F837D", marginTop: 2 }}>Biaya akad: {formatRupiah(result.munahAkad)}</div>
+          </div>
+          <div style={simMetricCardStyle}>
+            <div style={simMetricKStyle}>Biaya Mu'nah Akad</div>
+            <div style={simMetricVStyle}>{formatRupiah(result.munahAkad)}</div>
+            <div style={{ fontSize: 11, color: "#6F837D", marginTop: 2 }}>{upNum > 100000000 && !isMultiguna ? "Tarif flat UP > 100 Jt" : "Setelah potongan diskon"}</div>
           </div>
           <div style={simMetricCardStyle}>
             <div style={simMetricKStyle}>Diskon Mu'nah Pemeliharaan</div>
-            <div style={simMetricVStyle}>{(result.diskonMunah * 100).toFixed(2)}%</div>
+            <div style={simMetricVStyle}>{(result.diskonMunahPemeliharaan * 100).toFixed(2)}%</div>
+            <div style={{ fontSize: 11, color: "#6F837D", marginTop: 2 }}>{cfg.tarifPemeliharaanLabel}</div>
           </div>
           <div style={simMetricCardStyle}>
             <div style={simMetricKStyle}>Biaya {result.notarisInfo.jenis}</div>
             <div style={simMetricVStyle}>{formatRupiah(result.notarisInfo.biaya)}</div>
+            <div style={{ fontSize: 11, color: "#6F837D", marginTop: 2 }}>Pengikatan jaminan resmi</div>
           </div>
         </div>
       </div>
 
+      {/* 2 & 3. Matriks Proyeksi Pencairan Bersih & Angsuran Bulanan */}
       <div className="simulator-result-card" style={{ background: "#fff", border: "1px solid #DCD4C0", borderRadius: 10, padding: 22 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 1, color: "#B5872B", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: 700 }}>Simulasi Pencairan &amp; Angsuran per Tenor</div>
-          <ExportMenu onExportPng={handleDownloadPng} onExportPdf={handleDownloadPdf} />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+          <div>
+            <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 1, color: "#B5872B", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: 700 }}>
+              2 &amp; 3. Matriks Proyeksi Pencairan Bersih &amp; Rincian Angsuran per Tenor
+            </div>
+            <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12, color: "#5F5E5A", marginTop: 2 }}>
+              {!isMultiguna ? "Tenor 12 s.d. 60 Bulan (Tenor 48 & 60 bulan berlaku untuk UP > Rp 100 Juta)" : "Tenor 12 s.d. 36 Bulan"}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button
+              onClick={handleCopyWa}
+              style={{
+                fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12.5, fontWeight: 600,
+                padding: "8px 14px", borderRadius: 6, border: "1px solid #25D366", background: copiedWa ? "#25D366" : "#E8F5E9",
+                color: copiedWa ? "#fff" : "#1B5E20", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6
+              }}
+            >
+              {copiedWa ? "Tersalin ke Clipboard!" : "Salin Format WhatsApp"}
+            </button>
+            <ExportMenu onExportPng={handleDownloadPng} onExportPdf={handleDownloadPdf} />
+          </div>
         </div>
+
         <div className="simulator-table-wrap" style={{ overflow: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13.5 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13 }}>
             <thead>
               <tr>
-                <th style={simThStyle("left")}>Komponen</th>
-                {result.perTenor.map((r) => <th key={r.tenor} style={simThStyle("right")}>{r.tenor} bln</th>)}
+                <th style={simThStyle("left")}>Komponen Simulasi / Tenor</th>
+                {result.perTenor.map((r) => <th key={r.tenor} style={simThStyle("right")}>{r.tenor} Bulan</th>)}
               </tr>
             </thead>
             <tbody>
               {moneyRows.map((row) => (
                 <tr key={row.key} style={row.total ? simTotalRowStyle : row.highlight ? simAngsuranRowStyle : { borderBottom: "1px solid #DCD4C0" }}>
-                  <td style={{ padding: "10px 10px", textAlign: "left", fontWeight: row.total || row.highlight ? 700 : 400 }}>{row.label}</td>
-                  {result.perTenor.map((r) => <td key={r.tenor} style={{ padding: "10px 10px", textAlign: "right" }}>{formatRupiah(row.get(r))}</td>)}
+                  <td style={{ padding: "9px 10px", textAlign: "left", fontWeight: row.total || row.highlight ? 700 : 400 }}>{row.label}</td>
+                  {result.perTenor.map((r) => {
+                    const val = row.isRaw ? row.get(r) : r.isAvailable ? formatRupiah(row.get(r)) : "-";
+                    return (
+                      <td key={r.tenor} style={{ padding: "9px 10px", textAlign: "right" }}>
+                        {val}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
               <tr style={{ borderBottom: "1px solid #DCD4C0" }}>
-                <td style={{ padding: "10px 10px", textAlign: "left" }}>Rasio DBR (Angsuran / Pendapatan)</td>
-                {result.perTenor.map((r) => <td key={r.tenor} style={{ padding: "10px 10px", textAlign: "right" }}>{rpcNum ? (r.dbr * 100).toFixed(1) + "%" : "-"}</td>)}
-              </tr>
-              <tr>
-                <td style={{ padding: "10px 10px", textAlign: "left", fontWeight: 700 }}>Status Kelayakan (maks. DBR 40%)</td>
+                <td style={{ padding: "9px 10px", textAlign: "left" }}>Pendapatan Bersih Bulanan (x Kali Angsuran)</td>
                 {result.perTenor.map((r) => (
-                  <td key={r.tenor} style={{ padding: "10px 10px", textAlign: "right", fontWeight: 700, fontSize: 12, color: !rpcNum ? "#888780" : r.layak ? "#2F6F4F" : "#A32D2D" }}>
-                    {!rpcNum ? "-" : r.layak ? "LAYAK" : "MELEBIHI LIMIT"}
+                  <td key={r.tenor} style={{ padding: "9px 10px", textAlign: "right" }}>
+                    {!r.isAvailable ? "-" : rpcNum && r.kaliAngsuran ? `${r.kaliAngsuran.toFixed(2)}x` : "-"}
                   </td>
                 ))}
+              </tr>
+              <tr style={{ borderBottom: "1px solid #DCD4C0" }}>
+                <td style={{ padding: "9px 10px", textAlign: "left" }}>Rasio DBR (Beban Angsuran / RPC)</td>
+                {result.perTenor.map((r) => (
+                  <td key={r.tenor} style={{ padding: "9px 10px", textAlign: "right" }}>
+                    {!r.isAvailable ? "-" : rpcNum && r.dbr ? `${(r.dbr * 100).toFixed(2)}%` : "-"}
+                  </td>
+                ))}
+              </tr>
+              <tr>
+                <td style={{ padding: "9px 10px", textAlign: "left", fontWeight: 700 }}>Status Kelayakan DBR (Maks. 40% RPC)</td>
+                {result.perTenor.map((r) => {
+                  let color = "#5F5E5A";
+                  if (r.isAvailable && rpcNum) {
+                    color = r.layak ? "#2F6F4F" : "#A32D2D";
+                  }
+                  return (
+                    <td key={r.tenor} style={{ padding: "9px 10px", textAlign: "right", fontWeight: 700, fontSize: 11.5, color }}>
+                      {!r.isAvailable ? r.statusDbr : !rpcNum ? "-" : r.statusDbr}
+                    </td>
+                  );
+                })}
               </tr>
             </tbody>
           </table>
         </div>
         <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12, color: "#3F5A54", marginTop: 14, paddingTop: 12, borderTop: "1px dashed #DCD4C0" }}>
-          Catatan: hasil bersifat simulasi dan dapat berubah mengikuti ketentuan tarif/approval yang berlaku.
+          Catatan: Rincian perhitungan angsuran telah dibulatkan ke atas ({isMultiguna ? "Roundup Rp 100" : "Roundup Rp 1.000"}) sesuai ketentuan Juklak.
         </div>
-        <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
+      </div>
+
+      {/* 4. Analisis Pinjaman Rekomendasi Maksimal */}
+      <div className="simulator-result-card" style={{ background: "#fff", border: "1px solid #DCD4C0", borderRadius: 10, padding: 22, marginTop: 20 }}>
+        <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 1, color: "#B5872B", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: 700, marginBottom: 4 }}>
+          4. Analisis Pinjaman Rekomendasi Maksimal (Plafon Rekomendasi)
+        </div>
+        <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12, color: "#5F5E5A", marginBottom: 14 }}>
+          {isMultiguna
+            ? "Plafon rekomendasi adalah nilai terkecil antara Plafon LTV (70% taksiran agunan, Maks. 100 Jt) dan Plafon Kemampuan Membayar (RPC)."
+            : "Plafon rekomendasi adalah nilai terkecil antara Plafon LTV (70% taksiran agunan) dan Plafon Kemampuan Membayar (RPC)."}
+        </div>
+
+        <div className="simulator-table-wrap" style={{ overflow: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13 }}>
+            <thead>
+              <tr>
+                <th style={simThStyle("left")}>Komponen Rekomendasi / Tenor</th>
+                {result.perTenor.map((r) => <th key={r.tenor} style={simThStyle("right")}>{r.tenor} Bulan</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              <tr style={{ borderBottom: "1px solid #DCD4C0" }}>
+                <td style={{ padding: "9px 10px", textAlign: "left", color: "#16302C" }}>
+                  {isMultiguna ? "Plafon Maksimal Agunan (LTV 70% Taksiran, Maks. 100Jt)" : "Plafon Maksimal Agunan (LTV 70% Taksiran)"}
+                </td>
+                {result.perTenor.map((r) => (
+                  <td key={r.tenor} style={{ padding: "9px 10px", textAlign: "right", color: "#16302C" }}>
+                    {r.isAvailable ? formatRupiah(result.plafonLtv) : "-"}
+                  </td>
+                ))}
+              </tr>
+              <tr style={{ borderBottom: "1px solid #DCD4C0" }}>
+                <td style={{ padding: "9px 10px", textAlign: "left", color: "#16302C" }}>Plafon Maksimal Kemampuan Membayar (RPC)</td>
+                {result.perTenor.map((r) => (
+                  <td key={r.tenor} style={{ padding: "9px 10px", textAlign: "right", color: "#16302C" }}>
+                    {!r.isAvailable ? "-" : rpcNum ? formatRupiah(r.kemampuanBayar) : "-"}
+                  </td>
+                ))}
+              </tr>
+              <tr style={{ ...simTotalRowStyle, background: "#E2F0D9", borderTop: "1.5px solid #2F6F4F", borderBottom: "1.5px solid #2F6F4F" }}>
+                <td style={{ padding: "10px 10px", textAlign: "left", fontWeight: 700, color: "#16302C" }}>
+                  {isMultiguna ? "PINJAMAN REKOMENDASI MAKSIMAL (TERKECIL LTV/RPC/100JT)" : "PINJAMAN REKOMENDASI MAKSIMAL (TERKECIL LTV/RPC)"}
+                </td>
+                {result.perTenor.map((r) => (
+                  <td key={r.tenor} style={{ padding: "10px 10px", textAlign: "right", fontWeight: 700, color: "#1E5E2C" }}>
+                    {!r.isAvailable ? "-" : rpcNum ? formatRupiah(r.pinjamanRekomendasi) : formatRupiah(result.plafonLtv)}
+                  </td>
+                ))}
+              </tr>
+              <tr>
+                <td style={{ padding: "10px 10px", textAlign: "left", fontWeight: 700, color: "#16302C" }}>Status Pengajuan UP (vs Plafon Rekomendasi)</td>
+                {result.perTenor.map((r) => {
+                  let color = "#5F5E5A";
+                  if (r.isAvailable && rpcNum && upNum > 0) {
+                    color = r.memenuhi ? "#1E5E2C" : "#A32D2D";
+                  }
+                  return (
+                    <td key={r.tenor} style={{ padding: "10px 10px", textAlign: "right", fontWeight: 700, fontSize: 12, color }}>
+                      {!r.isAvailable ? r.statusRekomendasi : !rpcNum || !upNum ? "-" : r.statusRekomendasi}
+                    </td>
+                  );
+                })}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>
           <button
             onClick={handleDownloadPdf}
             style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13.5, fontWeight: 600, padding: "10px 18px", borderRadius: 6, border: "1px solid #1F4D43", background: "#1F4D43", color: "#fff", cursor: "pointer" }}
           >
             Cetak Ringkasan untuk Nasabah
           </button>
-        </div>
-      </div>
-
-      <div className="simulator-result-card" style={{ background: "#fff", border: "1px solid #DCD4C0", borderRadius: 10, padding: 22, marginTop: 20 }}>
-        <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 1, color: "#B5872B", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: 700, marginBottom: 16 }}>Analisis Pinjaman Rekomendasi Maksimal (Plafon Rekomendasi)</div>
-        <div className="simulator-table-wrap" style={{ overflow: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13.5 }}>
-            <thead>
-              <tr>
-                <th style={simThStyle("left")}>Komponen Rekomendasi / Tenor</th>
-                {result.perTenor.map((r) => <th key={r.tenor} style={simThStyle("right")}>{r.tenor} bln</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              <tr style={{ borderBottom: "1px solid #DCD4C0" }}>
-                <td style={{ padding: "10px 10px", textAlign: "left" }}>Plafon Maksimal Agunan (LTV 70% Taksiran)</td>
-                {result.perTenor.map((r) => <td key={r.tenor} style={{ padding: "10px 10px", textAlign: "right" }}>{formatRupiah(result.plafonLtv)}</td>)}
-              </tr>
-              <tr style={{ borderBottom: "1px solid #DCD4C0" }}>
-                <td style={{ padding: "10px 10px", textAlign: "left" }}>Plafon Maksimal Kemampuan Membayar (RPC)</td>
-                {result.perTenor.map((r) => <td key={r.tenor} style={{ padding: "10px 10px", textAlign: "right" }}>{rpcNum ? formatRupiah(r.kemampuanBayar) : "-"}</td>)}
-              </tr>
-              <tr style={simTotalRowStyle}>
-                <td style={{ padding: "10px 10px", textAlign: "left", fontWeight: 700 }}>Pinjaman Rekomendasi Maksimal (terkecil LTV/RPC)</td>
-                {result.perTenor.map((r) => <td key={r.tenor} style={{ padding: "10px 10px", textAlign: "right", fontWeight: 700 }}>{rpcNum ? formatRupiah(r.pinjamanRekomendasi) : "-"}</td>)}
-              </tr>
-              <tr>
-                <td style={{ padding: "10px 10px", textAlign: "left", fontWeight: 700 }}>Status Pengajuan UP (vs Plafon Rekomendasi)</td>
-                {result.perTenor.map((r) => (
-                  <td key={r.tenor} style={{ padding: "10px 10px", textAlign: "right", fontWeight: 700, fontSize: 12, color: !rpcNum ? "#888780" : r.memenuhi ? "#2F6F4F" : "#A32D2D" }}>
-                    {!rpcNum ? "-" : r.memenuhi ? "MEMENUHI" : "MELEBIHI"}
-                  </td>
-                ))}
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12, color: "#3F5A54", marginTop: 14, paddingTop: 12, borderTop: "1px dashed #DCD4C0" }}>
-          Plafon rekomendasi adalah nilai terkecil antara plafon LTV (70% taksiran) dan kemampuan membayar berdasarkan pendapatan bersih bulanan (RPC) pada tenor tersebut.
+          <button
+            onClick={handleCopyWa}
+            style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13.5, fontWeight: 600, padding: "10px 18px", borderRadius: 6, border: "1px solid #25D366", background: "#E8F5E9", color: "#1B5E20", cursor: "pointer" }}
+          >
+            {copiedWa ? "Tersalin ke Clipboard!" : "Salin Pesan WhatsApp"}
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function SimulasiProdukPanel() {
-  const [product, setProduct] = useState("amanah");
+function SimulasiProdukPanel({ prefill }) {
+  const [product, setProduct] = useState(prefill?.product || "arrum_bpkb");
   const tabs = [
-    { key: "amanah", label: "Amanah" },
-    { key: "arrum_bpkb", label: "Arrum BPKB" },
+    { key: "arrum_bpkb", label: "Arrum BPKB / Mikro" },
     { key: "arrum_multiguna", label: "Arrum Multiguna" },
+    { key: "amanah", label: "Amanah" },
   ];
+
+  useEffect(() => {
+    if (prefill?.product) {
+      setProduct(prefill.product);
+    }
+  }, [prefill]);
+
   return (
     <div>
       <div className="simulator-product-tabs" style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap", fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
@@ -2740,7 +3313,7 @@ function SimulasiProdukPanel() {
           );
         })}
       </div>
-      {product === "amanah" ? <AmanahCalculator /> : <AgunanCalculator productKey={product} />}
+      {product === "amanah" ? <AmanahCalculator prefill={prefill} /> : <AgunanCalculator productKey={product} prefill={prefill} />}
     </div>
   );
 }
@@ -3148,6 +3721,20 @@ export default function App() {
   const [view, setView] = useState("input");
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [inputTab, setInputTab] = useState("new");
+  const [simulasiPrefill, setSimulasiPrefill] = useState(null);
+
+  const handleOpenSimulasi = (lead) => {
+    let initialProduct = "arrum_bpkb";
+    const p = (lead?.produk || "").toUpperCase();
+    if (p.includes("AMANAH")) initialProduct = "amanah";
+    else if (p.includes("MULTIGUNA")) initialProduct = "arrum_multiguna";
+    setSimulasiPrefill({
+      nama: lead?.nama || "",
+      product: initialProduct,
+      produkName: lead?.produk || "",
+    });
+    setView("simulasi");
+  };
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [customersInactive, setCustomersInactive] = useState([]);
@@ -3239,14 +3826,14 @@ export default function App() {
               <button onClick={() => setInputTab("new")} style={{ padding: "8px 16px", borderRadius: 999, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, background: inputTab === "new" ? "#0A5C36" : "#F1EFE8", color: inputTab === "new" ? "#fff" : "#5F5E5A" }}>Input prospek baru</button>
               <button onClick={() => setInputTab("update")} style={{ padding: "8px 16px", borderRadius: 999, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, background: inputTab === "update" ? "#0A5C36" : "#F1EFE8", color: inputTab === "update" ? "#fff" : "#5F5E5A" }}>Update prospek saya</button>
             </div>
-            {inputTab === "new" ? <NewLeadForm onSubmit={addLead} /> : <UpdateLeadPanel leads={leads} onUpdate={updateLead} />}
+            {inputTab === "new" ? <NewLeadForm onSubmit={addLead} /> : <UpdateLeadPanel leads={leads} onUpdate={updateLead} onOpenSimulasi={handleOpenSimulasi} />}
           </div>
         ) : view === "simulasi" ? (
-          <SimulasiProdukPanel />
+          <SimulasiProdukPanel prefill={simulasiPrefill} />
         ) : view === "data" ? (
           adminUnlocked ? <DataNasabahInaktifPanel customers={customersInactive} onSubmit={addLead} /> : <AdminGate onUnlock={() => setAdminUnlocked(true)} />
         ) : adminUnlocked ? (
-          <AdminDashboard leads={leads} onUpdate={updateLead} />
+          <AdminDashboard leads={leads} onUpdate={updateLead} onOpenSimulasi={handleOpenSimulasi} />
         ) : (
           <AdminGate onUnlock={() => setAdminUnlocked(true)} />
         )}

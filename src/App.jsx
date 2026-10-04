@@ -2011,7 +2011,7 @@ function roundUpTo(value, negDigits) {
 const AGUNAN_PRODUCTS = {
   arrum_bpkb: {
     label: "Arrum BPKB",
-    tenors: [12, 18, 24, 36, 48, 60],
+    tenors: (up) => (up > 100000000 ? [12, 18, 24, 36, 48, 60] : [12, 18, 24, 36]),
     asuransiKendaraan: { 12: 0.00375, 18: 0.00438, 24: 0.00531, 36: 0.00662, 48: 0.00796, 60: 0.00924 },
     asuransiJiwa: { 12: 0.01125, 18: 0.01314, 24: 0.01593, 36: 0.01987, 48: 0.02389, 60: 0.02775 },
     asuransiJiwaLabel: "Asuransi Jiwa (Takaful Akhyar)",
@@ -2019,10 +2019,11 @@ const AGUNAN_PRODUCTS = {
     munahAkad: (taksiran, up, diskon) => (up > 100000000 ? 250000 : taksiran * 0.007 * (1 - diskon)),
     tarifPemeliharaan: () => 0.007,
     tarifPemeliharaanLabel: "0,7% x Taksiran (standar)",
+    kemampuanBayar: (ctx, tenor) => (2 * ctx.rpc * tenor) / (4.5 * (1 + 0.007 * tenor)),
   },
   arrum_multiguna: {
     label: "Arrum Multiguna",
-    tenors: [12, 18, 24, 36],
+    tenors: () => [12, 18, 24, 36],
     asuransiKendaraan: { 12: 0.00375, 18: 0.00438, 24: 0.00531, 36: 0.00662 },
     asuransiJiwa: { 12: 0.0113, 18: 0.0143, 24: 0.0193, 36: 0.0238 },
     asuransiJiwaLabel: "Asuransi Jiwa Multiguna",
@@ -2030,6 +2031,7 @@ const AGUNAN_PRODUCTS = {
     munahAkad: (taksiran) => taksiran * 0.007,
     tarifPemeliharaan: (up) => lookupTarifMunahTiering(up),
     tarifPemeliharaanLabel: "Tiering sesuai UP",
+    kemampuanBayar: (ctx, tenor) => tenor * (ctx.rpc * 0.5 - ctx.taksiran * ctx.tarifPemeliharaan * (1 - ctx.diskonMunah)),
   },
 };
 
@@ -2042,8 +2044,9 @@ function computeAgunanSimulasi(productKey, { rpc, taksiran, up }) {
   const notarisInfo = lookupNotarisFidusia(up);
   const tarifPemeliharaan = cfg.tarifPemeliharaan(up);
   const munahKotor = taksiran * tarifPemeliharaan;
+  const tenors = cfg.tenors(up);
 
-  const perTenor = cfg.tenors.map((tenor) => {
+  const perTenor = tenors.map((tenor) => {
     const asuransiKendaraan = up * (cfg.asuransiKendaraan[tenor] || 0);
     const asuransiJiwa = up * (cfg.asuransiJiwa[tenor] || 0);
     const totalPotongan = munahAkad + notarisInfo.biaya + asuransiKendaraan + asuransiJiwa;
@@ -2054,7 +2057,10 @@ function computeAgunanSimulasi(productKey, { rpc, taksiran, up }) {
     const totalAngsuran = roundUpTo(munahBersih + angsuranPokok, cfg.roundTo);
     const dbr = rpc ? totalAngsuran / rpc : 0;
     const layak = dbr <= 0.4;
-    return { tenor, asuransiKendaraan, asuransiJiwa, notaris: notarisInfo.biaya, munahAkad, totalPotongan, pencairanBersih, angsuranPokok, munahBersih, totalAngsuran, dbr, layak };
+    const kemampuanBayar = cfg.kemampuanBayar({ rpc, taksiran, up, tarifPemeliharaan, diskonMunah }, tenor);
+    const pinjamanRekomendasi = Math.min(plafonLtv, kemampuanBayar);
+    const memenuhi = up <= pinjamanRekomendasi;
+    return { tenor, asuransiKendaraan, asuransiJiwa, notaris: notarisInfo.biaya, munahAkad, totalPotongan, pencairanBersih, angsuranPokok, munahBersih, totalAngsuran, dbr, layak, kemampuanBayar, pinjamanRekomendasi, memenuhi };
   });
 
   return { plafonLtv, rasio, diskonMunah, munahAkad, notarisInfo, tarifPemeliharaan, munahKotor, perTenor };
@@ -2666,6 +2672,45 @@ function AgunanCalculator({ productKey }) {
           >
             Cetak Ringkasan untuk Nasabah
           </button>
+        </div>
+      </div>
+
+      <div className="simulator-result-card" style={{ background: "#fff", border: "1px solid #DCD4C0", borderRadius: 10, padding: 22, marginTop: 20 }}>
+        <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 1, color: "#B5872B", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: 700, marginBottom: 16 }}>Analisis Pinjaman Rekomendasi Maksimal (Plafon Rekomendasi)</div>
+        <div className="simulator-table-wrap" style={{ overflow: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13.5 }}>
+            <thead>
+              <tr>
+                <th style={simThStyle("left")}>Komponen Rekomendasi / Tenor</th>
+                {result.perTenor.map((r) => <th key={r.tenor} style={simThStyle("right")}>{r.tenor} bln</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              <tr style={{ borderBottom: "1px solid #DCD4C0" }}>
+                <td style={{ padding: "10px 10px", textAlign: "left" }}>Plafon Maksimal Agunan (LTV 70% Taksiran)</td>
+                {result.perTenor.map((r) => <td key={r.tenor} style={{ padding: "10px 10px", textAlign: "right" }}>{formatRupiah(result.plafonLtv)}</td>)}
+              </tr>
+              <tr style={{ borderBottom: "1px solid #DCD4C0" }}>
+                <td style={{ padding: "10px 10px", textAlign: "left" }}>Plafon Maksimal Kemampuan Membayar (RPC)</td>
+                {result.perTenor.map((r) => <td key={r.tenor} style={{ padding: "10px 10px", textAlign: "right" }}>{rpcNum ? formatRupiah(r.kemampuanBayar) : "-"}</td>)}
+              </tr>
+              <tr style={simTotalRowStyle}>
+                <td style={{ padding: "10px 10px", textAlign: "left", fontWeight: 700 }}>Pinjaman Rekomendasi Maksimal (terkecil LTV/RPC)</td>
+                {result.perTenor.map((r) => <td key={r.tenor} style={{ padding: "10px 10px", textAlign: "right", fontWeight: 700 }}>{rpcNum ? formatRupiah(r.pinjamanRekomendasi) : "-"}</td>)}
+              </tr>
+              <tr>
+                <td style={{ padding: "10px 10px", textAlign: "left", fontWeight: 700 }}>Status Pengajuan UP (vs Plafon Rekomendasi)</td>
+                {result.perTenor.map((r) => (
+                  <td key={r.tenor} style={{ padding: "10px 10px", textAlign: "right", fontWeight: 700, fontSize: 12, color: !rpcNum ? "#888780" : r.memenuhi ? "#2F6F4F" : "#A32D2D" }}>
+                    {!rpcNum ? "-" : r.memenuhi ? "MEMENUHI" : "MELEBIHI"}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12, color: "#3F5A54", marginTop: 14, paddingTop: 12, borderTop: "1px dashed #DCD4C0" }}>
+          Plafon rekomendasi adalah nilai terkecil antara plafon LTV (70% taksiran) dan kemampuan membayar berdasarkan pendapatan bersih bulanan (RPC) pada tenor tersebut.
         </div>
       </div>
     </div>

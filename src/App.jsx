@@ -2209,7 +2209,7 @@ const AGUNAN_PRODUCTS = {
   arrum_bpkb: {
     label: "Arrum BPKB / Mikro",
     titleLong: "SIMULASI PENCAIRAN & ANGSURAN - PEGADAIAN ARRUM BPKB / MIKRO",
-    subLabel: "Ketentuan SE No. 3 Tahun 2026 & Juklak Arrum Express Loan",
+    subLabel: "",
     unitKerja: "PEGADAIAN SYARIAH DAAN MOGOT",
     allTenors: [12, 18, 24, 36, 48, 60],
     asuransiKendaraan: { 12: 0.00375, 18: 0.00438, 24: 0.00531, 36: 0.00662, 48: 0.00796, 60: 0.00924 },
@@ -2700,10 +2700,10 @@ function AgunanCalculator({ productKey, prefill }) {
   const cfg = AGUNAN_PRODUCTS[productKey] || AGUNAN_PRODUCTS.arrum_bpkb;
   const isMultiguna = productKey === "arrum_multiguna";
 
-  const [nama, setNama] = useState(prefill?.nama || "Bapak Ahmad");
-  const [rpc, setRpc] = useState(prefill?.rpc ? String(prefill.rpc) : "15000000");
-  const [taksiran, setTaksiran] = useState(prefill?.taksiran ? String(prefill.taksiran) : "100000000");
-  const [up, setUp] = useState(prefill?.up ? String(prefill.up) : "70000000");
+  const [nama, setNama] = useState(prefill?.nama || "");
+  const [rpc, setRpc] = useState(prefill?.rpc ? String(prefill.rpc) : "");
+  const [taksiran, setTaksiran] = useState(prefill?.taksiran ? String(prefill.taksiran) : "");
+  const [up, setUp] = useState(prefill?.up ? String(prefill.up) : "");
   const [copiedWa, setCopiedWa] = useState(false);
 
   useEffect(() => {
@@ -2725,13 +2725,6 @@ function AgunanCalculator({ productKey, prefill }) {
     () => computeAgunanSimulasi(productKey, { rpc: rpcNum, taksiran: taksiranNum, up: upNum }),
     [productKey, rpcNum, taksiranNum, upNum]
   );
-
-  const loadExampleData = () => {
-    setNama("Bapak Ahmad");
-    setRpc("15000000");
-    setTaksiran("100000000");
-    setUp("70000000");
-  };
 
   const handleReset = () => {
     setNama("");
@@ -2773,8 +2766,7 @@ function AgunanCalculator({ productKey, prefill }) {
     const activeTenors = result.perTenor.filter((r) => r.isAvailable);
     const text = `*SIMULASI PENCAIRAN & ANGSURAN NASABAH*
 *PEGADAIAN SYARIAH DAAN MOGOT*
-_${cfg.titleLong}_
-_${cfg.subLabel}_
+_${cfg.titleLong}_${cfg.subLabel ? `\n_${cfg.subLabel}_` : ""}
 --------------------------------------------------
 *Nama Calon Rahin:* ${nama || "-"}
 *Pendapatan Bersih (RPC):* ${formatRupiah(rpcNum)}
@@ -2829,9 +2821,11 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
     ctx.font = "12.5px Arial, sans-serif";
     ctx.fillStyle = "#3F5A54";
     ctx.fillText(`Simulasi Pencairan & Angsuran Nasabah - ${cfg.label}`, padding, 48);
-    ctx.font = "10.5px Arial, sans-serif";
-    ctx.fillStyle = "#6F837D";
-    ctx.fillText(cfg.subLabel, padding, 64);
+    if (cfg.subLabel) {
+      ctx.font = "10.5px Arial, sans-serif";
+      ctx.fillStyle = "#6F837D";
+      ctx.fillText(cfg.subLabel, padding, 64);
+    }
 
     ctx.font = "11.5px Arial, sans-serif";
     ctx.fillStyle = "#16302C";
@@ -2911,17 +2905,15 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
   th:first-child, td:first-child { text-align: left; }
   td { text-align: right; padding: 7px 8px; border-bottom: 1px solid #DCD4C0; }
   tr.strong td { font-weight: 700; color: #2F6F4F; background: #EEF6F0; }
-  tr.rekomendasi td { font-weight: 700; color: #1E5E2C; background: #E2F0D9; }
   .note { font-family: Arial, sans-serif; font-size: 10.5px; color: #3F5A54; margin-top: 14px; padding-top: 8px; border-top: 1px dashed #DCD4C0; }
 </style></head>
 <body>
   <h1>PEGADAIAN SYARIAH DAAN MOGOT</h1>
   <div class="sub">Simulasi Pencairan &amp; Angsuran Nasabah - ${escapeHtml(cfg.label)}</div>
-  <div class="ketentuan">${escapeHtml(cfg.subLabel)}</div>
+  ${cfg.subLabel ? `<div class="ketentuan">${escapeHtml(cfg.subLabel)}</div>` : ""}
   
   <h2>I. Informasi Calon Rahin (Nasabah) &amp; Agunan</h2>
   <div class="sub">Nama Calon Rahin (Nasabah): <strong>${escapeHtml(nama || "-")}</strong></div>
-  <div class="sub">Pendapatan Bersih / RPC: <strong>${formatRupiah(rpcNum)}</strong></div>
   <div class="sub">Nilai Taksiran Agunan / Kendaraan: <strong>${formatRupiah(taksiranNum)}</strong></div>
   <div class="sub">Uang Pinjaman Disetujui (Marhun Bih): <strong>${formatRupiah(upNum)}</strong></div>
   <div class="sub">Tanggal Simulasi Cetak: ${tanggalCetak()}</div>
@@ -2933,31 +2925,6 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
     </thead>
     <tbody>
       ${bodyRows}
-    </tbody>
-  </table>
-
-  <h2>III. Analisis Pinjaman Rekomendasi Maksimal</h2>
-  <table>
-    <thead>
-      <tr><th>Komponen Rekomendasi / Tenor</th>${headCells}</tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>${escapeHtml(isMultiguna ? "Plafon Maksimal Agunan (LTV 70% Taksiran, Maks. 100Jt)" : "Plafon Maksimal Agunan (LTV 70% Taksiran)")}</td>
-        ${result.perTenor.map((r) => `<td>${r.isAvailable ? formatRupiah(result.plafonLtv) : "-"}</td>`).join("")}
-      </tr>
-      <tr>
-        <td>Plafon Maksimal Kemampuan Membayar (RPC)</td>
-        ${result.perTenor.map((r) => `<td>${!r.isAvailable ? "-" : rpcNum ? formatRupiah(r.kemampuanBayar) : "-"}</td>`).join("")}
-      </tr>
-      <tr class="rekomendasi">
-        <td>${escapeHtml(isMultiguna ? "PINJAMAN REKOMENDASI MAKSIMAL (TERKECIL LTV/RPC/100JT)" : "PINJAMAN REKOMENDASI MAKSIMAL (TERKECIL LTV/RPC)")}</td>
-        ${result.perTenor.map((r) => `<td>${!r.isAvailable ? "-" : rpcNum ? formatRupiah(r.pinjamanRekomendasi) : formatRupiah(result.plafonLtv)}</td>`).join("")}
-      </tr>
-      <tr>
-        <td>Status Pengajuan UP (vs Plafon Rekomendasi)</td>
-        ${result.perTenor.map((r) => `<td style="font-weight:700;color:${r.memenuhi ? "#1E5E2C" : "#A32D2D"};">${!r.isAvailable ? escapeHtml(r.statusRekomendasi) : (!rpcNum || !upNum ? "-" : escapeHtml(r.statusRekomendasi))}</td>`).join("")}
-      </tr>
     </tbody>
   </table>
   <div class="note">Catatan: rincian ini bersifat simulasi dan dapat berubah mengikuti ketentuan tarif/approval yang berlaku di Pegadaian Syariah.</div>
@@ -2986,28 +2953,21 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
               {cfg.unitKerja}
             </span>
           </div>
-          <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12.5, color: "#3F5A54", marginTop: 3 }}>
-            {cfg.subLabel}
-          </div>
+          {cfg.subLabel ? (
+            <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12.5, color: "#3F5A54", marginTop: 3 }}>
+              {cfg.subLabel}
+            </div>
+          ) : null}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button
-            onClick={loadExampleData}
-            style={{
-              fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12.5, fontWeight: 600,
-              padding: "7px 14px", borderRadius: 6, border: "1px solid #B5872B", background: "#FFF9E6", color: "#854F0B", cursor: "pointer"
-            }}
-          >
-            Muat Contoh SE 2026 (Bpk Ahmad)
-          </button>
           <button
             onClick={handleReset}
             style={{
               fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12.5, fontWeight: 500,
-              padding: "7px 12px", borderRadius: 6, border: "1px solid #DCD4C0", background: "#fff", color: "#5F5E5A", cursor: "pointer"
+              padding: "7px 14px", borderRadius: 6, border: "1px solid #DCD4C0", background: "#fff", color: "#5F5E5A", cursor: "pointer"
             }}
           >
-            Reset
+            Reset Form
           </button>
         </div>
       </div>

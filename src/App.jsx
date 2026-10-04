@@ -2842,8 +2842,8 @@ function AgunanCalculator({ productKey, prefill }) {
     setUp("");
   };
 
-  // Baris-baris komponen pencairan & angsuran
-  const moneyRows = [
+  // 2. Baris-baris komponen pencairan bersih
+  const pencairanRows = [
     { key: "up", label: "Uang Pinjaman / Marhun Bih (UP)", get: (r) => r.up },
     { key: "munahAkad", label: "Biaya Administrasi / Mu'nah Akad", get: (r) => r.munahAkad },
     { key: "notaris", label: `Biaya Notaris / Legalisasi / Fidusia (${result.notarisInfo.jenis})`, get: (r) => r.notaris },
@@ -2851,7 +2851,11 @@ function AgunanCalculator({ productKey, prefill }) {
     { key: "asuransiJiwa", label: cfg.asuransiJiwaLabel, get: (r) => r.asuransiJiwa },
     { key: "totalPotongan", label: "Total Biaya Potongan Pencairan", get: (r) => r.totalPotongan, total: true },
     { key: "pencairanBersih", label: "PENCAIRAN BERSIH DITERIMA NASABAH (NET)", get: (r) => r.pencairanBersih, highlight: true },
-    { key: "tarifPemeliharaan", label: "Tarif Mu'nah Pemeliharaan Standar (%)", get: (r) => r.isAvailable ? (r.tarifPemeliharaan * 100).toFixed(2) + "%" : "-", isRaw: true },
+  ];
+
+  // 3. Baris-baris rincian angsuran bulanan
+  const angsuranRows = [
+    { key: "tarifPemeliharaan", label: isMultiguna ? "Tarif Mu'nah Pemeliharaan Tiering (%)" : "Tarif Mu'nah Pemeliharaan Standar (%)", get: (r) => r.isAvailable ? (r.tarifPemeliharaan * 100).toFixed(2) + "%" : "-", isRaw: true },
     { key: "munahKotor", label: "Mu'nah Pemeliharaan Kotor / Bulan (Sebelum Diskon)", get: (r) => r.munahKotor },
     { key: "potonganDiskon", label: "Potongan Diskon Mu'nah Pemeliharaan / Bulan (Rp)", get: (r) => r.potonganDiskon },
     { key: "munahBersih", label: "Mu'nah Pemeliharaan BERSIH / Bulan (Setelah Diskon)", get: (r) => r.munahBersih },
@@ -3181,15 +3185,15 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
         </div>
       </div>
 
-      {/* 2 & 3. Matriks Proyeksi Pencairan Bersih & Angsuran Bulanan */}
+      {/* 2. Matriks Proyeksi Pencairan Bersih per Tenor */}
       <div className="simulator-result-card" style={{ background: "#fff", border: "1px solid #DCD4C0", borderRadius: 10, padding: 22 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
           <div>
             <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 1, color: "#B5872B", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: 700 }}>
-              2 &amp; 3. Matriks Proyeksi Pencairan Bersih &amp; Rincian Angsuran per Tenor
+              2. Matriks Proyeksi Pencairan Bersih per Tenor
             </div>
             <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12, color: "#5F5E5A", marginTop: 2 }}>
-              {!isMultiguna ? "Tenor 12 s.d. 60 Bulan (Tenor 48 & 60 bulan berlaku untuk UP > Rp 100 Juta)" : "Tenor 12 s.d. 36 Bulan"}
+              {!isMultiguna ? "Tenor 12 s.d. 60 Bulan (Tenor 48 & 60 bulan berlaku untuk UP > Rp 100 Juta)" : "Tenor 12 s.d. 36 Bulan (Maksimal 36 Bulan)"}
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -3211,12 +3215,50 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
           <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13 }}>
             <thead>
               <tr>
-                <th style={simThStyle("left")}>Komponen Simulasi / Tenor</th>
+                <th style={simThStyle("left")}>Komponen Biaya / Tenor</th>
                 {result.perTenor.map((r) => <th key={r.tenor} style={simThStyle("right")}>{r.tenor} Bulan</th>)}
               </tr>
             </thead>
             <tbody>
-              {moneyRows.map((row) => (
+              {pencairanRows.map((row) => (
+                <tr key={row.key} style={row.total ? simTotalRowStyle : row.highlight ? simAngsuranRowStyle : { borderBottom: "1px solid #DCD4C0" }}>
+                  <td style={{ padding: "9px 10px", textAlign: "left", fontWeight: row.total || row.highlight ? 700 : 400 }}>{row.label}</td>
+                  {result.perTenor.map((r) => {
+                    const val = row.isRaw ? row.get(r) : r.isAvailable ? formatRupiah(row.get(r)) : "-";
+                    return (
+                      <td key={r.tenor} style={{ padding: "9px 10px", textAlign: "right" }}>
+                        {val}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 3. Rincian Angsuran Bulanan & Potongan Diskon Mu'nah Pemeliharaan */}
+      <div className="simulator-result-card" style={{ background: "#fff", border: "1px solid #DCD4C0", borderRadius: 10, padding: 22, marginTop: 20 }}>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 1, color: "#B5872B", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: 700 }}>
+            3. Rincian Angsuran Bulanan &amp; Potongan Diskon Mu'nah Pemeliharaan
+          </div>
+          <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12, color: "#5F5E5A", marginTop: 2 }}>
+            Perhitungan angsuran bulanan, mu'nah pemeliharaan bersih, dan evaluasi kelayakan DBR nasabah
+          </div>
+        </div>
+
+        <div className="simulator-table-wrap" style={{ overflow: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13 }}>
+            <thead>
+              <tr>
+                <th style={simThStyle("left")}>Komponen Angsuran / Tenor</th>
+                {result.perTenor.map((r) => <th key={r.tenor} style={simThStyle("right")}>{r.tenor} Bulan</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {angsuranRows.map((row) => (
                 <tr key={row.key} style={row.total ? simTotalRowStyle : row.highlight ? simAngsuranRowStyle : { borderBottom: "1px solid #DCD4C0" }}>
                   <td style={{ padding: "9px 10px", textAlign: "left", fontWeight: row.total || row.highlight ? 700 : 400 }}>{row.label}</td>
                   {result.perTenor.map((r) => {

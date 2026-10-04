@@ -707,6 +707,128 @@ function ExportMenu({ onExportPng, onExportCsv, onExportPdf }) {
   );
 }
 
+function LeadActionMenu({ lead, onFollowUp, onSimulasi }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
+        title="Pilihan Aksi"
+        style={{
+          background: open ? "#E5E3DA" : "#F8F9FA",
+          border: "1px solid #DCD4C0",
+          borderRadius: 6,
+          padding: "4px 6px",
+          cursor: "pointer",
+          color: "#3d3d3a",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          transition: "all 0.15s ease",
+        }}
+      >
+        <MoreVertical size={15} />
+      </button>
+
+      {open && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: "absolute",
+            right: 0,
+            top: "calc(100% + 4px)",
+            zIndex: 60,
+            background: "#fff",
+            borderRadius: 8,
+            boxShadow: "0 6px 20px rgba(0,0,0,0.15)",
+            border: "1px solid #E5E3DA",
+            minWidth: 155,
+            padding: 4,
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              onFollowUp(lead);
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              width: "100%",
+              padding: "7px 10px",
+              border: "none",
+              background: "transparent",
+              borderRadius: 6,
+              fontSize: 12.5,
+              fontWeight: 500,
+              color: "#2C2C2A",
+              cursor: "pointer",
+              textAlign: "left",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#F4F3EF")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            <ClipboardList size={14} color="#5F5E5A" />
+            <span>Follow up</span>
+          </button>
+
+          {onSimulasi && (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onSimulasi(lead);
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                width: "100%",
+                padding: "7px 10px",
+                border: "none",
+                background: "transparent",
+                borderRadius: 6,
+                fontSize: 12.5,
+                fontWeight: 500,
+                color: "#0A5C36",
+                cursor: "pointer",
+                textAlign: "left",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#E8F5E9")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <Calculator size={14} color="#0A5C36" />
+              <span>Hitung Simulasi</span>
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AllLeadsPanel({ leads, onUpdate, hideKategori, onOpenSimulasi }) {
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState(EMPTY_FILTERS);
@@ -909,7 +1031,7 @@ function AllLeadsPanel({ leads, onUpdate, hideKategori, onOpenSimulasi }) {
         <ExportMenu onExportPng={exportPng} onExportCsv={exportCsv} />
       </div>
 
-      <div className="admin-table-wrap" style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "auto", marginBottom: 12 }}>
+      <div className="admin-table-wrap" style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "auto", marginBottom: 12, minHeight: 220 }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
           <thead>
             <tr style={{ textAlign: "left", color: "#888780", background: "#F8F9FA" }}>
@@ -937,7 +1059,7 @@ function AllLeadsPanel({ leads, onUpdate, hideKategori, onOpenSimulasi }) {
               <th style={{ padding: "8px 12px" }}>
                 <FilterDropdown label="Status" fieldKey="status" options={options.status} selected={filters.status} onChange={setFilter("status")} sortState={sortState} onSort={handleSort} variant="header" />
               </th>
-              <th style={{ padding: "8px 12px" }}></th>
+              <th style={{ padding: "8px 12px", width: 44, textAlign: "center" }}></th>
             </tr>
           </thead>
           <tbody>
@@ -953,21 +1075,8 @@ function AllLeadsPanel({ leads, onUpdate, hideKategori, onOpenSimulasi }) {
                 <td style={{ padding: "8px 12px" }}>{l.pemasar}</td>
                 <td style={{ padding: "8px 12px" }}>{l.unit}</td>
                 <td style={{ padding: "8px 12px" }}><StatusBadge status={l.status} /></td>
-                <td style={{ padding: "8px 12px", whiteSpace: "nowrap" }}>
-                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <button onClick={() => openEdit(l)} style={{ background: "#F1EFE8", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#3d3d3a" }}>
-                      Follow up
-                    </button>
-                    {onOpenSimulasi && (
-                      <button
-                        onClick={() => onOpenSimulasi(l)}
-                        title="Buka kalkulator simulasi angsuran untuk prospek ini"
-                        style={{ background: "#E8F5E9", border: "1px solid #C8E6C9", borderRadius: 6, padding: "5px 8px", fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#0A5C36", display: "inline-flex", alignItems: "center", gap: 4 }}
-                      >
-                        <Calculator size={13} /> Simulasi
-                      </button>
-                    )}
-                  </div>
+                <td style={{ padding: "8px 12px", textAlign: "center", whiteSpace: "nowrap" }}>
+                  <LeadActionMenu lead={l} onFollowUp={openEdit} onSimulasi={onOpenSimulasi} />
                 </td>
               </tr>
             ))}

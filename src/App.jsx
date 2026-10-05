@@ -2319,7 +2319,7 @@ const AGUNAN_PRODUCTS = {
     label: "Arrum BPKB / Mikro",
     titleLong: "SIMULASI PENCAIRAN & ANGSURAN - PEGADAIAN ARRUM BPKB / MIKRO",
     subLabel: "",
-    unitKerja: "PEGADAIAN SYARIAH DAAN MOGOT",
+    unitKerja: "",
     allTenors: [12, 18, 24, 36, 48, 60],
     asuransiKendaraan: { 12: 0.00375, 18: 0.00438, 24: 0.00531, 36: 0.00662, 48: 0.00796, 60: 0.00924 },
     asuransiJiwa: { 12: 0.01125, 18: 0.01314, 24: 0.01593, 36: 0.01987, 48: 0.02389, 60: 0.02775 },
@@ -2333,7 +2333,7 @@ const AGUNAN_PRODUCTS = {
     label: "Arrum Multiguna",
     titleLong: "SIMULASI PENCAIRAN & ANGSURAN - PEGADAIAN ARRUM MULTIGUNA",
     subLabel: "Maksimal Plafon Rp 100 Juta & Tenor s.d. 36 Bulan",
-    unitKerja: "PEGADAIAN SYARIAH DAAN MOGOT",
+    unitKerja: "",
     allTenors: [12, 18, 24, 36],
     asuransiKendaraan: { 12: 0.00375, 18: 0.00438, 24: 0.00531, 36: 0.00662 },
     asuransiJiwa: { 12: 0.0113, 18: 0.0143, 24: 0.0193, 36: 0.0238 },
@@ -2683,7 +2683,16 @@ function AmanahCalculator({ prefill }) {
   .note { margin-top: 16px; font-size: 11px; color: #888780; }
 </style></head>
 <body>
-  <h1>Ringkasan Simulasi Amanah</h1>
+  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0A5C36; padding-bottom: 12px; margin-bottom: 14px;">
+    <div>
+      <h1 style="color: #0A5C36; font-size: 19px; margin: 0 0 2px;">PEGADAIAN SYARIAH</h1>
+      <div class="sub">Ringkasan Simulasi Pembiayaan Amanah</div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <img src="${DANANTARA_LOGO}" alt="Logo Danantara Indonesia" style="height: 28px; width: auto; object-fit: contain;" />
+      <img src="${PEGADAIAN_LOGO}" alt="Logo Pegadaian Syariah" style="height: 36px; width: auto; object-fit: contain;" />
+    </div>
+  </div>
   <div class="sub">Nama Motor: ${escapeHtml(namaMotor || "-")}</div>
   <div class="sub">Harga Motor / OTR: ${formatRupiah(otrNum)}</div>
   <div class="sub">Uang Pinjaman: ${formatRupiah(result.uangPinjaman)}</div>
@@ -2878,7 +2887,7 @@ function AgunanCalculator({ productKey, prefill }) {
   const handleCopyWa = () => {
     const activeTenors = result.perTenor.filter((r) => r.isAvailable);
     const text = `*SIMULASI PENCAIRAN & ANGSURAN NASABAH*
-*PEGADAIAN SYARIAH DAAN MOGOT*
+*PEGADAIAN SYARIAH*
 _${cfg.titleLong}_${cfg.subLabel ? `\n_${cfg.subLabel}_` : ""}
 --------------------------------------------------
 *Nama Calon Rahin:* ${nama || "-"}
@@ -2930,7 +2939,7 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
 
     ctx.fillStyle = "#123530";
     ctx.font = "bold 16px Georgia, serif";
-    ctx.fillText("PEGADAIAN SYARIAH DAAN MOGOT", padding, 30);
+    ctx.fillText("PEGADAIAN SYARIAH", padding, 30);
     ctx.font = "12.5px Arial, sans-serif";
     ctx.fillStyle = "#3F5A54";
     ctx.fillText(`Simulasi Pencairan & Angsuran Nasabah - ${cfg.label}`, padding, 48);
@@ -3021,9 +3030,17 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
   .note { font-family: Arial, sans-serif; font-size: 10.5px; color: #3F5A54; margin-top: 14px; padding-top: 8px; border-top: 1px dashed #DCD4C0; }
 </style></head>
 <body>
-  <h1>PEGADAIAN SYARIAH DAAN MOGOT</h1>
-  <div class="sub">Simulasi Pencairan &amp; Angsuran Nasabah - ${escapeHtml(cfg.label)}</div>
-  ${cfg.subLabel ? `<div class="ketentuan">${escapeHtml(cfg.subLabel)}</div>` : ""}
+  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #123530; padding-bottom: 12px; margin-bottom: 14px;">
+    <div>
+      <h1 style="margin: 0; font-size: 19px; color: #123530;">PEGADAIAN SYARIAH</h1>
+      <div class="sub" style="margin-top: 2px;">Simulasi Pencairan &amp; Angsuran Nasabah - ${escapeHtml(cfg.label)}</div>
+      ${cfg.subLabel ? `<div class="ketentuan" style="margin: 2px 0 0;">${escapeHtml(cfg.subLabel)}</div>` : ""}
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <img src="${DANANTARA_LOGO}" alt="Logo Danantara Indonesia" style="height: 28px; width: auto; object-fit: contain;" />
+      <img src="${PEGADAIAN_LOGO}" alt="Logo Pegadaian Syariah" style="height: 36px; width: auto; object-fit: contain;" />
+    </div>
+  </div>
   
   <h2>I. Informasi Calon Rahin (Nasabah) &amp; Agunan</h2>
   <div class="sub">Nama Calon Rahin (Nasabah): <strong>${escapeHtml(nama || "-")}</strong></div>
@@ -3062,9 +3079,11 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <span style={{ fontSize: 26, fontWeight: 700, color: "#123530", letterSpacing: 0.2 }}>Simulasi {cfg.label}</span>
-            <span style={{ background: "#E8F5E9", color: "#1B5E20", fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 999, border: "1px solid #C8E6C9" }}>
-              {cfg.unitKerja}
-            </span>
+            {cfg.unitKerja ? (
+              <span style={{ background: "#E8F5E9", color: "#1B5E20", fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 999, border: "1px solid #C8E6C9" }}>
+                {cfg.unitKerja}
+              </span>
+            ) : null}
           </div>
           {cfg.subLabel ? (
             <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12.5, color: "#3F5A54", marginTop: 3 }}>

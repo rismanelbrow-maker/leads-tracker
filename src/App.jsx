@@ -2323,6 +2323,113 @@ function roundUpTo(value, negDigits) {
   return Math.ceil((value || 0) / factor) * factor;
 }
 
+// --- Tabel & konfigurasi khusus untuk Rahn Tasjily Tanah (RTT) SE No. 142 Tahun 2026 ---
+
+const RTT_NOTARIS_TABLE = [
+  { min: 1, max: 50000000, jenis: "SKMHT / Legalisasi", biaya: 350000 },
+  { min: 50000001, max: 100000000, jenis: "APHT / HT Peringkat I", biaya: 750000 },
+  { min: 100000001, max: 150000000, jenis: "APHT / HT Peringkat I", biaya: 1150000 },
+  { min: 150000001, max: 200000000, jenis: "APHT / HT Peringkat I", biaya: 1500000 },
+];
+
+function lookupNotarisRtt(uangPinjaman) {
+  if (!uangPinjaman || uangPinjaman <= 0) return { jenis: "-", biaya: 0 };
+  for (const row of RTT_NOTARIS_TABLE) {
+    if (uangPinjaman <= row.max) return row;
+  }
+  return { jenis: "APHT / HT Peringkat I", biaya: 1500000 };
+}
+
+const RTT_IJK_RATE = {
+  12: 0.0075,
+  18: 0.0105,
+  24: 0.0135,
+  36: 0.0195,
+  48: 0.0255,
+  60: 0.0315,
+};
+
+const RTT_DISKON_MUNAH_TABLE = [
+  { max: 0.01, rate: 0.9857 },
+  { max: 0.02, rate: 0.9714 },
+  { max: 0.03, rate: 0.9571 },
+  { max: 0.04, rate: 0.9429 },
+  { max: 0.05, rate: 0.9286 },
+  { max: 0.06, rate: 0.9143 },
+  { max: 0.07, rate: 0.9000 },
+  { max: 0.08, rate: 0.8857 },
+  { max: 0.09, rate: 0.8714 },
+  { max: 0.10, rate: 0.8571 },
+  { max: 0.11, rate: 0.8429 },
+  { max: 0.12, rate: 0.8286 },
+  { max: 0.13, rate: 0.8143 },
+  { max: 0.14, rate: 0.8000 },
+  { max: 0.15, rate: 0.7857 },
+  { max: 0.16, rate: 0.7714 },
+  { max: 0.17, rate: 0.7571 },
+  { max: 0.18, rate: 0.7429 },
+  { max: 0.19, rate: 0.7286 },
+  { max: 0.20, rate: 0.7143 },
+  { max: 0.21, rate: 0.7000 },
+  { max: 0.22, rate: 0.6857 },
+  { max: 0.23, rate: 0.6714 },
+  { max: 0.24, rate: 0.6571 },
+  { max: 0.25, rate: 0.6429 },
+  { max: 0.26, rate: 0.6286 },
+  { max: 0.27, rate: 0.6143 },
+  { max: 0.28, rate: 0.6000 },
+  { max: 0.29, rate: 0.5857 },
+  { max: 0.30, rate: 0.5714 },
+  { max: 0.31, rate: 0.5571 },
+  { max: 0.32, rate: 0.5429 },
+  { max: 0.33, rate: 0.5286 },
+  { max: 0.34, rate: 0.5143 },
+  { max: 0.35, rate: 0.5000 },
+  { max: 0.36, rate: 0.4857 },
+  { max: 0.37, rate: 0.4714 },
+  { max: 0.38, rate: 0.4571 },
+  { max: 0.39, rate: 0.4429 },
+  { max: 0.40, rate: 0.4286 },
+  { max: 0.41, rate: 0.4143 },
+  { max: 0.42, rate: 0.4000 },
+  { max: 0.43, rate: 0.3857 },
+  { max: 0.44, rate: 0.3714 },
+  { max: 0.45, rate: 0.3571 },
+  { max: 0.46, rate: 0.3429 },
+  { max: 0.47, rate: 0.3286 },
+  { max: 0.48, rate: 0.3143 },
+  { max: 0.49, rate: 0.3000 },
+  { max: 0.50, rate: 0.2857 },
+  { max: 0.51, rate: 0.2714 },
+  { max: 0.52, rate: 0.2571 },
+  { max: 0.53, rate: 0.2429 },
+  { max: 0.54, rate: 0.2286 },
+  { max: 0.55, rate: 0.2143 },
+  { max: 0.56, rate: 0.2000 },
+  { max: 0.57, rate: 0.1857 },
+  { max: 0.58, rate: 0.1714 },
+  { max: 0.59, rate: 0.1571 },
+  { max: 0.60, rate: 0.1429 },
+  { max: 0.61, rate: 0.1286 },
+  { max: 0.62, rate: 0.1143 },
+  { max: 0.63, rate: 0.1000 },
+  { max: 0.64, rate: 0.0857 },
+  { max: 0.65, rate: 0.0714 },
+  { max: 0.66, rate: 0.0571 },
+  { max: 0.67, rate: 0.0429 },
+  { max: 0.68, rate: 0.0286 },
+  { max: 0.69, rate: 0.0143 },
+  { max: 1.00, rate: 0.0000 },
+];
+
+function lookupDiskonMunahRtt(rasio) {
+  if (rasio <= 0) return 0;
+  for (const row of RTT_DISKON_MUNAH_TABLE) {
+    if (rasio <= row.max) return row.rate;
+  }
+  return 0;
+}
+
 const AGUNAN_PRODUCTS = {
   arrum_bpkb: {
     label: "Arrum BPKB / Mikro",
@@ -2352,18 +2459,37 @@ const AGUNAN_PRODUCTS = {
     tarifPemeliharaanLabel: "Tiering sesuai UP (0,805% - 1,05%)",
     kemampuanBayar: (ctx, tenor) => tenor * (ctx.rpc * 0.5 - ctx.taksiran * ctx.tarifPemeliharaan * (1 - ctx.diskonMunah)),
   },
+  rtt: {
+    label: "Rahn Tasjily Tanah (RTT)",
+    titleLong: "SIMULASI PENCAIRAN & ANGSURAN - PEGADAIAN RAHN TASJILY TANAH (RTT)",
+    subLabel: "Agunan Sertifikat Tanah / Bangunan (SHM / SHGB) - Sesuai Ketentuan SE No. 142 Tahun 2026",
+    unitKerja: "SE No. 142/2026",
+    allTenors: [12, 18, 24, 36, 48, 60],
+    roundTo: -3,
+    tarifPemeliharaan: () => 0.007,
+    tarifPemeliharaanLabel: "0,7% x Taksiran / Bulan (Standar SE 142/2026)",
+    kemampuanBayar: (ctx, tenor) => Math.max(0, tenor * (ctx.rpc * 0.40 - ctx.taksiran * 0.007 * (1 - ctx.diskonMunah))),
+  },
 };
 
 function computeAgunanSimulasi(productKey, { rpc, taksiran, up }) {
   const cfg = AGUNAN_PRODUCTS[productKey] || AGUNAN_PRODUCTS.arrum_bpkb;
   const isMultiguna = productKey === "arrum_multiguna";
-  const plafonLtv = isMultiguna ? Math.min(taksiran * 0.7, 100000000) : taksiran * 0.7;
+  const isRtt = productKey === "rtt";
+  const plafonLtv = isMultiguna
+    ? Math.min(taksiran * 0.7, 100000000)
+    : isRtt
+      ? Math.min(taksiran * 0.7, 200000000)
+      : taksiran * 0.7;
   const rasio = taksiran ? up / taksiran : 0;
 
   // Diskon & Biaya Mu'nah Akad
   let diskonMunahAkad = 0;
   let munahAkad = 0;
-  if (!isMultiguna) {
+  if (isRtt) {
+    diskonMunahAkad = 0;
+    munahAkad = up > 0 ? 70000 : 0; // Flat Rp 70.000 SE No. 142/2026
+  } else if (!isMultiguna) {
     if (up > 100000000) {
       diskonMunahAkad = 0;
       munahAkad = 250000;
@@ -2377,19 +2503,21 @@ function computeAgunanSimulasi(productKey, { rpc, taksiran, up }) {
   }
 
   // Diskon & Tarif Mu'nah Pemeliharaan
-  const diskonMunahPemeliharaan = lookupDiskonMunah(rasio);
+  const diskonMunahPemeliharaan = isRtt ? lookupDiskonMunahRtt(rasio) : lookupDiskonMunah(rasio);
   const tarifPemeliharaan = cfg.tarifPemeliharaan(up);
   const munahKotor = taksiran * tarifPemeliharaan;
   const potonganDiskon = munahKotor * diskonMunahPemeliharaan;
   const munahBersih = munahKotor - potonganDiskon;
 
-  const notarisInfo = lookupNotarisFidusia(up);
+  const notarisInfo = isRtt ? lookupNotarisRtt(up) : lookupNotarisFidusia(up);
   const tenors = cfg.allTenors;
 
   const perTenor = tenors.map((tenor) => {
-    const isAvailable = !isMultiguna
-      ? (tenor <= 36 || up > 100000000)
-      : (up >= 1000000 && up <= 100000000);
+    const isAvailable = isRtt
+      ? (up <= 200000000)
+      : !isMultiguna
+        ? (tenor <= 36 || up > 100000000)
+        : (up >= 1000000 && up <= 100000000);
 
     if (!isAvailable) {
       return {
@@ -2400,6 +2528,7 @@ function computeAgunanSimulasi(productKey, { rpc, taksiran, up }) {
         notaris: null,
         asuransiKendaraan: null,
         asuransiJiwa: null,
+        asuransiIjk: null,
         totalPotongan: null,
         pencairanBersih: null,
         tarifPemeliharaan: null,
@@ -2411,22 +2540,29 @@ function computeAgunanSimulasi(productKey, { rpc, taksiran, up }) {
         kaliAngsuran: null,
         dbr: null,
         layak: false,
-        statusDbr: !isMultiguna
-          ? "N/A (UP <= 100Jt)"
-          : (up > 100000000 ? "MELEBIHI PLAFON MULTIGUNA (MAKS. 100JT)" : "DI BAWAH MINIMAL PRODUK (MIN. 1JT)"),
+        statusDbr: isRtt
+          ? "MELEBIHI PLAFON RTT (MAKS. 200JT)"
+          : !isMultiguna
+            ? "N/A (UP <= 100Jt)"
+            : (up > 100000000 ? "MELEBIHI PLAFON MULTIGUNA (MAKS. 100JT)" : "DI BAWAH MINIMAL PRODUK (MIN. 1JT)"),
         plafonAgunan: null,
         kemampuanBayar: null,
         pinjamanRekomendasi: null,
         memenuhi: false,
-        statusRekomendasi: !isMultiguna
-          ? "TENOR TIDAK TERSEDIA (UP <= 100Jt)"
-          : (up > 100000000 ? "MELEBIHI PLAFON MULTIGUNA (MAKS. 100JT)" : "DI BAWAH MINIMAL PRODUK (MIN. 1JT)"),
+        statusRekomendasi: isRtt
+          ? "MELEBIHI PLAFON RTT (MAKS. 200JT)"
+          : !isMultiguna
+            ? "TENOR TIDAK TERSEDIA (UP <= 100Jt)"
+            : (up > 100000000 ? "MELEBIHI PLAFON MULTIGUNA (MAKS. 100JT)" : "DI BAWAH MINIMAL PRODUK (MIN. 1JT)"),
       };
     }
 
-    const asuransiKendaraan = up * (cfg.asuransiKendaraan[tenor] || 0);
-    const asuransiJiwa = up * (cfg.asuransiJiwa[tenor] || 0);
-    const totalPotongan = munahAkad + notarisInfo.biaya + asuransiKendaraan + asuransiJiwa;
+    const asuransiKendaraan = isRtt ? 0 : up * (cfg.asuransiKendaraan?.[tenor] || 0);
+    const asuransiJiwa = isRtt ? 0 : up * (cfg.asuransiJiwa?.[tenor] || 0);
+    const asuransiIjk = isRtt ? up * (RTT_IJK_RATE[tenor] || 0) : 0;
+    const totalPotongan = isRtt
+      ? munahAkad + notarisInfo.biaya + asuransiIjk
+      : munahAkad + notarisInfo.biaya + asuransiKendaraan + asuransiJiwa;
     const pencairanBersih = up - totalPotongan;
     const angsuranPokok = tenor ? up / tenor : 0;
     const totalAngsuran = roundUpTo(munahBersih + angsuranPokok, cfg.roundTo);
@@ -2438,7 +2574,9 @@ function computeAgunanSimulasi(productKey, { rpc, taksiran, up }) {
     const kemampuanBayar = cfg.kemampuanBayar({ rpc, taksiran, up, tarifPemeliharaan, diskonMunah: diskonMunahPemeliharaan }, tenor);
     const pinjamanRekomendasi = isMultiguna
       ? Math.min(plafonLtv, kemampuanBayar, 100000000)
-      : Math.min(plafonLtv, kemampuanBayar);
+      : isRtt
+        ? Math.min(plafonLtv, kemampuanBayar, 200000000)
+        : Math.min(plafonLtv, kemampuanBayar);
     const memenuhi = up <= pinjamanRekomendasi;
     const statusRekomendasi = memenuhi ? "MEMENUHI REKOMENDASI" : "MELEBIHI REKOMENDASI";
 
@@ -2448,6 +2586,7 @@ function computeAgunanSimulasi(productKey, { rpc, taksiran, up }) {
       up,
       asuransiKendaraan,
       asuransiJiwa,
+      asuransiIjk,
       notaris: notarisInfo.biaya,
       munahAkad,
       totalPotongan,
@@ -2871,6 +3010,7 @@ function escapeHtml(s) {
 function AgunanCalculator({ productKey, prefill }) {
   const cfg = AGUNAN_PRODUCTS[productKey] || AGUNAN_PRODUCTS.arrum_bpkb;
   const isMultiguna = productKey === "arrum_multiguna";
+  const isRtt = productKey === "rtt";
 
   const [nama, setNama] = useState(prefill?.nama || "");
   const [rpc, setRpc] = useState(prefill?.rpc ? String(prefill.rpc) : "");
@@ -2890,7 +3030,7 @@ function AgunanCalculator({ productKey, prefill }) {
   const upNum = Number(up) || 0;
 
   const rawSuggestedUP = taksiranNum * 0.7;
-  const maxCap = isMultiguna ? 100000000 : Infinity;
+  const maxCap = isMultiguna ? 100000000 : isRtt ? 200000000 : Infinity;
   const suggestedUP = Math.floor(Math.min(rawSuggestedUP, maxCap) / 100000) * 100000;
 
   const result = useMemo(
@@ -2906,15 +3046,24 @@ function AgunanCalculator({ productKey, prefill }) {
   };
 
   // 2. Baris-baris komponen pencairan bersih
-  const pencairanRows = [
-    { key: "up", label: "Uang Pinjaman / Marhun Bih (UP)", get: (r) => r.up },
-    { key: "munahAkad", label: "Biaya Administrasi / Mu'nah Akad", get: (r) => r.munahAkad },
-    { key: "notaris", label: `Biaya Notaris / Legalisasi / Fidusia (${result.notarisInfo.jenis})`, get: (r) => r.notaris },
-    { key: "asuransiKendaraan", label: `Biaya Asuransi Kendaraan (${isMultiguna ? "Arrum" : "Arrum BPKB"})`, get: (r) => r.asuransiKendaraan },
-    { key: "asuransiJiwa", label: cfg.asuransiJiwaLabel, get: (r) => r.asuransiJiwa },
-    { key: "totalPotongan", label: "Total Biaya Potongan Pencairan", get: (r) => r.totalPotongan, total: true },
-    { key: "pencairanBersih", label: "PENCAIRAN BERSIH DITERIMA NASABAH (NET)", get: (r) => r.pencairanBersih, highlight: true },
-  ];
+  const pencairanRows = isRtt
+    ? [
+        { key: "up", label: "Uang Pinjaman / Marhun Bih (UP)", get: (r) => r.up },
+        { key: "munahAkad", label: "Biaya Administrasi / Mu'nah Akad (Flat)", get: (r) => r.munahAkad },
+        { key: "notaris", label: `Biaya Notaris / APHT / Hak Tanggungan (${result.notarisInfo.jenis})`, get: (r) => r.notaris },
+        { key: "asuransiIjk", label: "Biaya Asuransi Kebakaran & Jiwa (IJK / Takaful)", get: (r) => r.asuransiIjk },
+        { key: "totalPotongan", label: "Total Biaya Potongan Pencairan", get: (r) => r.totalPotongan, total: true },
+        { key: "pencairanBersih", label: "PENCAIRAN BERSIH DITERIMA NASABAH (NET)", get: (r) => r.pencairanBersih, highlight: true },
+      ]
+    : [
+        { key: "up", label: "Uang Pinjaman / Marhun Bih (UP)", get: (r) => r.up },
+        { key: "munahAkad", label: "Biaya Administrasi / Mu'nah Akad", get: (r) => r.munahAkad },
+        { key: "notaris", label: `Biaya Notaris / Legalisasi / Fidusia (${result.notarisInfo.jenis})`, get: (r) => r.notaris },
+        { key: "asuransiKendaraan", label: `Biaya Asuransi Kendaraan (${isMultiguna ? "Arrum" : "Arrum BPKB"})`, get: (r) => r.asuransiKendaraan },
+        { key: "asuransiJiwa", label: cfg.asuransiJiwaLabel, get: (r) => r.asuransiJiwa },
+        { key: "totalPotongan", label: "Total Biaya Potongan Pencairan", get: (r) => r.totalPotongan, total: true },
+        { key: "pencairanBersih", label: "PENCAIRAN BERSIH DITERIMA NASABAH (NET)", get: (r) => r.pencairanBersih, highlight: true },
+      ];
 
   // 3. Baris-baris rincian angsuran bulanan
   const angsuranRows = [
@@ -2940,18 +3089,19 @@ function AgunanCalculator({ productKey, prefill }) {
 
   const handleCopyWa = () => {
     const activeTenors = result.perTenor.filter((r) => r.isAvailable);
-    const text = `*SIMULASI PENCAIRAN & ANGSURAN NASABAH*
-*PEGADAIAN SYARIAH*
-_${cfg.titleLong}_${cfg.subLabel ? `\n_${cfg.subLabel}_` : ""}
+    const headerWa = isRtt
+      ? `*SIMULASI PENCAIRAN & ANGSURAN - PEGADAIAN RAHN TASJILY TANAH (RTT)*\n*PT PEGADAIAN - UNIT USAHA SYARIAH*\n_Agunan Sertifikat Tanah / Bangunan (SHM/SHGB) - Sesuai Ketentuan SE No. 142 Tahun 2026_`
+      : `*SIMULASI PENCAIRAN & ANGSURAN NASABAH*\n*PEGADAIAN SYARIAH*\n_${cfg.titleLong}_${cfg.subLabel ? `\n_${cfg.subLabel}_` : ""}`;
+
+    const text = `${headerWa}
 --------------------------------------------------
 *Nama Calon Rahin:* ${nama || "-"}
 *Pendapatan Bersih (RPC):* ${formatRupiah(rpcNum)}
-*Nilai Taksiran Agunan:* ${formatRupiah(taksiranNum)}
+*Nilai Taksiran Agunan ${isRtt ? "(Tanah/Bangunan)" : ""}:* ${formatRupiah(taksiranNum)}
 *Uang Pinjaman (UP):* ${formatRupiah(upNum)}
-*Maksimal Plafon LTV 70%:* ${formatRupiah(result.plafonLtv)}
-*Diskon Mu'nah Akad:* ${(result.diskonMunahAkad * 100).toFixed(2)}%
-*Biaya Mu'nah Akad:* ${formatRupiah(result.munahAkad)}
-*Biaya ${result.notarisInfo.jenis}:* ${formatRupiah(result.notarisInfo.biaya)}
+*Maksimal Plafon LTV 70%${isRtt ? " (Maks. 200Jt)" : ""}:* ${formatRupiah(result.plafonLtv)}
+${isRtt ? `*Biaya Administrasi (Flat):* Rp 70.000\n*Biaya Notaris / APHT (${result.notarisInfo.jenis}):* ${formatRupiah(result.notarisInfo.biaya)}` : `*Diskon Mu'nah Akad:* ${(result.diskonMunahAkad * 100).toFixed(2)}%\n*Biaya Mu'nah Akad:* ${formatRupiah(result.munahAkad)}\n*Biaya ${result.notarisInfo.jenis}:* ${formatRupiah(result.notarisInfo.biaya)}`}
+*Diskon Mu'nah Pemeliharaan:* ${(result.diskonMunahPemeliharaan * 100).toFixed(2)}%
 
 *RINGKASAN ESTIMASI PENCAIRAN BERSIH & ANGSURAN:*
 ${activeTenors.map((r) => `• *Tenor ${r.tenor} Bulan:*
@@ -3022,10 +3172,10 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
     const centerX = padding + width / 2;
     ctx.fillStyle = "#123530";
     ctx.font = "bold 16px Georgia, serif";
-    ctx.fillText("PEGADAIAN SYARIAH DAAN MOGOT", centerX, 28);
+    ctx.fillText(isRtt ? "PT PEGADAIAN - UNIT USAHA SYARIAH" : "PEGADAIAN SYARIAH DAAN MOGOT", centerX, 28);
     ctx.font = "12px Arial, sans-serif";
     ctx.fillStyle = "#3F5A54";
-    ctx.fillText(`Simulasi Pencairan & Angsuran Nasabah - ${cfg.label}`, centerX, 46);
+    ctx.fillText(isRtt ? "SLIP SIMULASI PENCAIRAN & ANGSURAN - RAHN TASJILY TANAH (RTT)" : `Simulasi Pencairan & Angsuran Nasabah - ${cfg.label}`, centerX, 46);
     if (cfg.subLabel) {
       ctx.font = "10.5px Arial, sans-serif";
       ctx.fillStyle = "#6F837D";
@@ -3046,7 +3196,7 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
     ctx.fillStyle = "#16302C";
     const infoStartY = dividerY + 18;
     ctx.fillText(`Nama Calon Rahin (Nasabah): ${nama || "-"}`, padding, infoStartY);
-    ctx.fillText(`Nilai Taksiran Agunan / Kendaraan: ${formatRupiah(taksiranNum)}`, padding, infoStartY + 18);
+    ctx.fillText(`Nilai Taksiran Agunan ${isRtt ? "(Tanah/Bangunan)" : "/ Kendaraan"}: ${formatRupiah(taksiranNum)}`, padding, infoStartY + 18);
     ctx.fillText(`Uang Pinjaman Disetujui (Marhun Bih): ${formatRupiah(upNum)}`, padding, infoStartY + 36);
     ctx.fillText(`Tanggal Simulasi Cetak: ${tanggalCetak()}`, padding, infoStartY + 54);
 
@@ -3089,7 +3239,7 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
     ctx.textAlign = "left";
     ctx.fillStyle = "#3F5A54";
     ctx.font = "10px Arial, sans-serif";
-    ctx.fillText("Catatan: rincian ini bersifat simulasi dan dapat berubah mengikuti ketentuan tarif/approval yang berlaku di Pegadaian Syariah.", padding, y + 24);
+    ctx.fillText(isRtt ? "Catatan: Simulasi SE No. 142/2026. Angsuran dibulatkan ke kelipatan Rp 1.000. Biaya admin flat Rp 70.000." : "Catatan: rincian ini bersifat simulasi dan dapat berubah mengikuti ketentuan tarif/approval yang berlaku di Pegadaian Syariah.", padding, y + 24);
 
     const link = document.createElement("a");
     link.download = `simulasi-${productKey}-${nama ? nama.replace(/\s+/g, "_").toLowerCase() : "nasabah"}-${todayStr()}.png`;
@@ -3106,9 +3256,38 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
       })
       .join("");
 
+    const titleHtml = isRtt
+      ? `<h1 style="margin: 0; font-size: 17px; color: #123530;">PT PEGADAIAN - UNIT USAHA SYARIAH</h1>
+         <div class="sub" style="margin-top: 3px; font-weight: 700; color: #123530;">SLIP SIMULASI PENCAIRAN &amp; ANGSURAN NASABAH - RAHN TASJILY TANAH (RTT)</div>
+         <div class="ketentuan">Agunan Sertifikat Tanah / Bangunan (SHM / SHGB) - Sesuai Ketentuan SE No. 142 Tahun 2026</div>`
+      : `<h1 style="margin: 0; font-size: 18px; color: #123530;">PEGADAIAN SYARIAH DAAN MOGOT</h1>
+         <div class="sub" style="margin-top: 3px; font-weight: 500;">Simulasi Pencairan &amp; Angsuran Nasabah - ${escapeHtml(cfg.label)}</div>
+         ${cfg.subLabel ? `<div class="ketentuan">${escapeHtml(cfg.subLabel)}</div>` : ""}`;
+
+    const catatanHtml = isRtt
+      ? `<div class="note">
+          <strong>CATATAN &amp; KETENTUAN SYARIAH:</strong><br />
+          1. Perhitungan di atas merupakan estimasi/simulasi pencairan &amp; angsuran berdasarkan SE No. 142 Tahun 2026.<br />
+          2. Biaya Administrasi (Mu'nah Akad) ditetapkan sebesar Rp70.000,- (flat).<br />
+          3. Besaran pencairan bersih dan angsuran bersifat final setelah verifikasi fisik sertifikat &amp; persetujuan Pemutus Kredit.<br />
+          4. Total angsuran per bulan sudah dibulatkan naik ke kelipatan Rp1.000 terdekat.<br />
+          5. Akad yang digunakan adalah Akad Rahn Tasjily dan Akad Mu'nah Pemeliharaan dengan agunan Sertifikat Tanah (SHM/SHGB).
+        </div>
+        <div style="margin-top: 34px; display: flex; justify-content: space-between; font-family: Arial, sans-serif; font-size: 11px;">
+          <div style="text-align: center; width: 200px;">
+            <div>Calon Rahin (Nasabah),</div>
+            <div style="margin-top: 50px;">( _______________________ )</div>
+          </div>
+          <div style="text-align: center; width: 200px;">
+            <div>Sales / Account Officer,</div>
+            <div style="margin-top: 50px;">( _______________________ )</div>
+          </div>
+        </div>`
+      : `<div class="note">Catatan: rincian ini bersifat simulasi dan dapat berubah mengikuti ketentuan tarif/approval yang berlaku di Pegadaian Syariah.</div>`;
+
     const html = `<!doctype html>
 <html lang="id"><head><meta charset="utf-8" />
-<title>Simulasi ${escapeHtml(cfg.label)} - Pegadaian Syariah Daan Mogot</title>
+<title>Simulasi ${escapeHtml(cfg.label)} - Pegadaian Syariah</title>
 <style>
   @page { margin: 16mm 14mm; }
   body { font-family: Georgia, 'Iowan Old Style', serif; color: #16302C; padding: 12px; }
@@ -3121,7 +3300,7 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
   th:first-child, td:first-child { text-align: left; }
   td { text-align: right; padding: 7px 8px; border-bottom: 1px solid #DCD4C0; }
   tr.strong td { font-weight: 700; color: #2F6F4F; background: #EEF6F0; }
-  .note { font-family: Arial, sans-serif; font-size: 10.5px; color: #3F5A54; margin-top: 14px; padding-top: 8px; border-top: 1px dashed #DCD4C0; }
+  .note { font-family: Arial, sans-serif; font-size: 10.5px; color: #3F5A54; margin-top: 14px; padding-top: 8px; border-top: 1px dashed #DCD4C0; line-height: 1.5; }
 </style></head>
 <body>
   <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #123530; padding-bottom: 12px; margin-bottom: 14px;">
@@ -3129,18 +3308,16 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
       <img src="${DANANTARA_LOGO}" alt="Logo Danantara Indonesia" style="height: 30px; width: auto; object-fit: contain;" />
     </div>
     <div style="flex: 1; text-align: center; padding: 0 10px;">
-      <h1 style="margin: 0; font-size: 18px; color: #123530;">PEGADAIAN SYARIAH DAAN MOGOT</h1>
-      <div class="sub" style="margin-top: 3px; font-weight: 500;">Simulasi Pencairan &amp; Angsuran Nasabah - ${escapeHtml(cfg.label)}</div>
-      ${cfg.subLabel ? `<div class="ketentuan">${escapeHtml(cfg.subLabel)}</div>` : ""}
+      ${titleHtml}
     </div>
     <div style="width: 120px; display: flex; justify-content: flex-end; align-items: center;">
       <img src="${PEGADAIAN_LOGO}" alt="Logo Pegadaian Syariah" style="height: 38px; width: auto; object-fit: contain;" />
     </div>
   </div>
   
-  <h2>I. Informasi Calon Rahin (Nasabah) &amp; Agunan</h2>
+  <h2>I. Informasi Calon Rahin (Nasabah) &amp; Agunan ${isRtt ? "Tanah" : ""}</h2>
   <div class="sub">Nama Calon Rahin (Nasabah): <strong>${escapeHtml(nama || "-")}</strong></div>
-  <div class="sub">Nilai Taksiran Agunan / Kendaraan: <strong>${formatRupiah(taksiranNum)}</strong></div>
+  <div class="sub">Nilai Taksiran Agunan ${isRtt ? "(Tanah/Bangunan)" : "/ Kendaraan"}: <strong>${formatRupiah(taksiranNum)}</strong></div>
   <div class="sub">Uang Pinjaman Disetujui (Marhun Bih): <strong>${formatRupiah(upNum)}</strong></div>
   <div class="sub">Tanggal Simulasi Cetak: ${tanggalCetak()}</div>
 
@@ -3153,7 +3330,7 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
       ${bodyRows}
     </tbody>
   </table>
-  <div class="note">Catatan: rincian ini bersifat simulasi dan dapat berubah mengikuti ketentuan tarif/approval yang berlaku di Pegadaian Syariah.</div>
+  ${catatanHtml}
 </body></html>`;
 
     const win = window.open("", "_blank");
@@ -3168,6 +3345,7 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
   const overLtv = taksiranNum > 0 && upNum > result.plafonLtv;
   const overCapMultiguna = isMultiguna && upNum > 100000000;
   const underMinMultiguna = isMultiguna && upNum > 0 && upNum < 1000000;
+  const overCapRtt = isRtt && upNum > 200000000;
 
   return (
     <div className="simulator-panel" style={{ fontFamily: "Georgia, 'Iowan Old Style', serif", color: "#16302C" }}>
@@ -3204,7 +3382,7 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
       <div className="simulator-data-card" style={{ background: "#fff", border: "1px solid #DCD4C0", borderRadius: 10, padding: 22, marginBottom: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 1, color: "#B5872B", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: 700 }}>
-            1. Parameter Input Simulasi Nasabah &amp; Agunan
+            1. Parameter Input Simulasi Nasabah &amp; Agunan {isRtt ? "Tanah/Bangunan" : ""}
           </div>
           {prefill?.nama && (
             <span style={{ fontSize: 11.5, background: "#E8F5E9", color: "#1B5E20", padding: "2px 8px", borderRadius: 4, fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
@@ -3226,17 +3404,17 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
             </div>
           </div>
           <div>
-            <label style={simLabelStyle}>Nilai Taksiran Agunan / Kendaraan (Rp)</label>
-            <input type="number" style={simFieldStyle} value={taksiran} onChange={(e) => setTaksiran(e.target.value)} placeholder="Contoh: 100000000" />
+            <label style={simLabelStyle}>{isRtt ? "Nilai Taksiran Agunan (Tanah / Bangunan) (Rp)" : "Nilai Taksiran Agunan / Kendaraan (Rp)"}</label>
+            <input type="number" style={simFieldStyle} value={taksiran} onChange={(e) => setTaksiran(e.target.value)} placeholder="Contoh: 200000000" />
             <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 11, color: "#5F5E5A", marginTop: 4 }}>
               Dasar perhitungan plafon LTV 70% dan Mu'nah Pemeliharaan.
             </div>
           </div>
           <div style={{ gridColumn: "span 2" }}>
             <label style={simLabelStyle}>Uang Pinjaman / Marhun Bih (UP) (Rp)</label>
-            <input type="number" style={simFieldStyle} value={up} onChange={(e) => setUp(e.target.value)} placeholder="Contoh: 70000000" />
+            <input type="number" style={simFieldStyle} value={up} onChange={(e) => setUp(e.target.value)} placeholder="Contoh: 100000000" />
             <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 11.5, color: "#3F5A54", marginTop: 5 }}>
-              Maksimal Plafon LTV 70%: <strong>{formatRupiah(result.plafonLtv)}</strong>.{" "}
+              Maksimal Plafon LTV 70%{isRtt ? " (Maks. 200Jt)" : ""}: <strong>{formatRupiah(result.plafonLtv)}</strong>.{" "}
               {taksiranNum > 0 && (
                 <button
                   type="button"
@@ -3257,6 +3435,11 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
                 Peringatan: Arrum Multiguna memiliki batas maksimal pinjaman Rp 100.000.000.
               </div>
             )}
+            {overCapRtt && (
+              <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12, color: "#A32D2D", marginTop: 5, fontWeight: 600 }}>
+                Peringatan: Rahn Tasjily Tanah (RTT) memiliki batas maksimal pinjaman Rp 200.000.000.
+              </div>
+            )}
             {underMinMultiguna && (
               <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12, color: "#A32D2D", marginTop: 5, fontWeight: 600 }}>
                 Peringatan: Uang pinjaman di bawah minimal produk Arrum Multiguna (Min. Rp 1.000.000).
@@ -3270,7 +3453,7 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
           <div style={simMetricCardStyle}>
             <div style={simMetricKStyle}>Maksimal Plafon LTV 70%</div>
             <div style={simMetricVStyle}>{formatRupiah(result.plafonLtv)}</div>
-            <div style={{ fontSize: 11, color: "#6F837D", marginTop: 2 }}>{isMultiguna ? "LTV 70% (Maks. 100 Jt)" : "70% dari nilai taksiran"}</div>
+            <div style={{ fontSize: 11, color: "#6F837D", marginTop: 2 }}>{isMultiguna ? "LTV 70% (Maks. 100 Jt)" : isRtt ? "LTV 70% (Maks. 200 Jt)" : "70% dari nilai taksiran"}</div>
           </div>
           <div style={simMetricCardStyle}>
             <div style={simMetricKStyle}>Rasio UP terhadap Taksiran</div>
@@ -3278,14 +3461,14 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
             <div style={{ fontSize: 11, color: "#6F837D", marginTop: 2 }}>Dasar tiering diskon mu'nah</div>
           </div>
           <div style={simMetricCardStyle}>
-            <div style={simMetricKStyle}>Diskon Mu'nah Akad</div>
-            <div style={simMetricVStyle}>{(result.diskonMunahAkad * 100).toFixed(2)}%</div>
-            <div style={{ fontSize: 11, color: "#6F837D", marginTop: 2 }}>Biaya akad: {formatRupiah(result.munahAkad)}</div>
+            <div style={simMetricKStyle}>{isRtt ? "Biaya Administrasi Flat" : "Diskon Mu'nah Akad"}</div>
+            <div style={simMetricVStyle}>{isRtt ? "Rp 70.000" : `${(result.diskonMunahAkad * 100).toFixed(2)}%`}</div>
+            <div style={{ fontSize: 11, color: "#6F837D", marginTop: 2 }}>{isRtt ? "Flat SE No. 142/2026" : `Biaya akad: ${formatRupiah(result.munahAkad)}`}</div>
           </div>
           <div style={simMetricCardStyle}>
-            <div style={simMetricKStyle}>Biaya Mu'nah Akad</div>
-            <div style={simMetricVStyle}>{formatRupiah(result.munahAkad)}</div>
-            <div style={{ fontSize: 11, color: "#6F837D", marginTop: 2 }}>{upNum > 100000000 && !isMultiguna ? "Tarif flat UP > 100 Jt" : "Setelah potongan diskon"}</div>
+            <div style={simMetricKStyle}>{isRtt ? "Tarif Mu'nah Standar" : "Biaya Mu'nah Akad"}</div>
+            <div style={simMetricVStyle}>{isRtt ? "0,70%" : formatRupiah(result.munahAkad)}</div>
+            <div style={{ fontSize: 11, color: "#6F837D", marginTop: 2 }}>{isRtt ? "0,7% x Taksiran / Bulan" : (upNum > 100000000 && !isMultiguna ? "Tarif flat UP > 100 Jt" : "Setelah potongan diskon")}</div>
           </div>
           <div style={simMetricCardStyle}>
             <div style={simMetricKStyle}>Diskon Mu'nah Pemeliharaan</div>
@@ -3295,7 +3478,7 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
           <div style={simMetricCardStyle}>
             <div style={simMetricKStyle}>Biaya {result.notarisInfo.jenis}</div>
             <div style={simMetricVStyle}>{formatRupiah(result.notarisInfo.biaya)}</div>
-            <div style={{ fontSize: 11, color: "#6F837D", marginTop: 2 }}>Pengikatan jaminan resmi</div>
+            <div style={{ fontSize: 11, color: "#6F837D", marginTop: 2 }}>{isRtt ? "Pengikatan Hak Tanggungan" : "Pengikatan jaminan resmi"}</div>
           </div>
         </div>
       </div>
@@ -3308,7 +3491,11 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
               2. Matriks Proyeksi Pencairan Bersih per Tenor
             </div>
             <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12, color: "#5F5E5A", marginTop: 2 }}>
-              {!isMultiguna ? "Tenor 12 s.d. 60 Bulan (Tenor 48 & 60 bulan berlaku untuk UP > Rp 100 Juta)" : "Tenor 12 s.d. 36 Bulan (Maksimal 36 Bulan)"}
+              {isRtt
+                ? "Tenor 12 s.d. 60 Bulan (Sesuai SE No. 142 Tahun 2026 - Agunan Sertifikat Tanah SHM/SHGB)"
+                : !isMultiguna
+                  ? "Tenor 12 s.d. 60 Bulan (Tenor 48 & 60 bulan berlaku untuk UP > Rp 100 Juta)"
+                  : "Tenor 12 s.d. 36 Bulan (Maksimal 36 Bulan)"}
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -3432,7 +3619,9 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
         <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12, color: "#5F5E5A", marginBottom: 14 }}>
           {isMultiguna
             ? "Plafon rekomendasi adalah nilai terkecil antara Plafon LTV (70% taksiran agunan, Maks. 100 Jt) dan Plafon Kemampuan Membayar (RPC)."
-            : "Plafon rekomendasi adalah nilai terkecil antara Plafon LTV (70% taksiran agunan) dan Plafon Kemampuan Membayar (RPC)."}
+            : isRtt
+              ? "Plafon rekomendasi adalah nilai terkecil antara Plafon LTV (70% taksiran agunan, Maks. 200 Jt) dan Plafon Kemampuan Membayar (RPC)."
+              : "Plafon rekomendasi adalah nilai terkecil antara Plafon LTV (70% taksiran agunan) dan Plafon Kemampuan Membayar (RPC)."}
         </div>
 
         <div className="simulator-table-wrap" style={{ overflow: "auto" }}>
@@ -3446,7 +3635,11 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
             <tbody>
               <tr style={{ borderBottom: "1px solid #DCD4C0" }}>
                 <td style={{ padding: "9px 10px", textAlign: "left", color: "#16302C" }}>
-                  {isMultiguna ? "Plafon Maksimal Agunan (LTV 70% Taksiran, Maks. 100Jt)" : "Plafon Maksimal Agunan (LTV 70% Taksiran)"}
+                  {isMultiguna
+                    ? "Plafon Maksimal Agunan (LTV 70% Taksiran, Maks. 100Jt)"
+                    : isRtt
+                      ? "Plafon Maksimal Agunan (LTV 70% Taksiran, Maks. 200Jt)"
+                      : "Plafon Maksimal Agunan (LTV 70% Taksiran)"}
                 </td>
                 {result.perTenor.map((r) => (
                   <td key={r.tenor} style={{ padding: "9px 10px", textAlign: "right", color: "#16302C" }}>
@@ -3464,7 +3657,11 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
               </tr>
               <tr style={{ ...simTotalRowStyle, background: "#E2F0D9", borderTop: "1.5px solid #2F6F4F", borderBottom: "1.5px solid #2F6F4F" }}>
                 <td style={{ padding: "10px 10px", textAlign: "left", fontWeight: 700, color: "#16302C" }}>
-                  {isMultiguna ? "PINJAMAN REKOMENDASI MAKSIMAL (TERKECIL LTV/RPC/100JT)" : "PINJAMAN REKOMENDASI MAKSIMAL (TERKECIL LTV/RPC)"}
+                  {isMultiguna
+                    ? "PINJAMAN REKOMENDASI MAKSIMAL (TERKECIL LTV/RPC/100JT)"
+                    : isRtt
+                      ? "PINJAMAN REKOMENDASI MAKSIMAL (TERKECIL LTV/RPC/200JT)"
+                      : "PINJAMAN REKOMENDASI MAKSIMAL (TERKECIL LTV/RPC)"}
                 </td>
                 {result.perTenor.map((r) => (
                   <td key={r.tenor} style={{ padding: "10px 10px", textAlign: "right", fontWeight: 700, color: "#1E5E2C" }}>
@@ -3514,6 +3711,7 @@ function SimulasiProdukPanel({ prefill }) {
   const tabs = [
     { key: "arrum_bpkb", label: "Arrum BPKB / Mikro" },
     { key: "arrum_multiguna", label: "Arrum Multiguna" },
+    { key: "rtt", label: "Rahn Tasjily Tanah (RTT)" },
     { key: "amanah", label: "Amanah" },
   ];
 
@@ -3645,7 +3843,7 @@ const MOBILE_CSS = `
     .data-table-wrap { margin: 0 -4px; overflow-x: auto !important; }
     .data-table-wrap table { min-width: 560px; font-size: 11.5px !important; }
     .inactive-info-grid { grid-template-columns: 1fr !important; gap: 3px 0 !important; }
-    .simulator-product-tabs { display: grid !important; grid-template-columns: repeat(3, 1fr); gap: 6px !important; }
+    .simulator-product-tabs { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 6px !important; }
     .simulator-product-tabs button { padding: 10px 4px !important; font-size: 12px !important; min-height: 44px; }
     .inactive-modal-card { padding: 16px !important; }
     .inactive-modal-card form button[type="submit"] { width: 100%; min-height: 48px; justify-content: center; }
@@ -3954,6 +4152,7 @@ export default function App() {
     const p = (lead?.produk || "").toUpperCase();
     if (p.includes("AMANAH")) initialProduct = "amanah";
     else if (p.includes("MULTIGUNA")) initialProduct = "arrum_multiguna";
+    else if (p.includes("TANAH") || p.includes("RTT") || p.includes("TASJILY")) initialProduct = "rtt";
     setSimulasiPrefill({
       nama: lead?.nama || "",
       product: initialProduct,

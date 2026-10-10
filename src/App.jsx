@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, LabelList
 } from "recharts";
 import {
@@ -492,7 +492,7 @@ function DashboardOverview({ leads, onNavigate }) {
       <div style={{ background: "#fff", borderRadius: 12, padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
         <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Tren leads masuk per tanggal</div>
         <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={trendData} margin={{ bottom: 20 }}>
+          <LineChart data={trendData} margin={{ top: 8, right: 12, left: -10, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#EFEEE8" />
             <XAxis
               dataKey="tanggal"
@@ -504,9 +504,19 @@ function DashboardOverview({ leads, onNavigate }) {
               tickFormatter={(d) => (d && d.length >= 10 ? d.slice(5) : d)}
             />
             <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={28} />
-            <Tooltip cursor={{ fill: "rgba(0,0,0,0.04)" }} />
-            <Bar dataKey="jumlah" fill="#0A5C36" radius={[4, 4, 0, 0]} />
-          </BarChart>
+            <Tooltip
+              contentStyle={{ borderRadius: 8, border: "1px solid #DCD4C0", fontSize: 12 }}
+              formatter={(val) => [`${val} lead`, "Jumlah"]}
+            />
+            <Line
+              type="monotone"
+              dataKey="jumlah"
+              stroke="#0A5C36"
+              strokeWidth={2.5}
+              dot={{ r: 3.5, fill: "#0A5C36", strokeWidth: 1.5, stroke: "#fff" }}
+              activeDot={{ r: 5, fill: "#1D9E75" }}
+            />
+          </LineChart>
         </ResponsiveContainer>
       </div>
       <div style={{ background: "#fff", borderRadius: 12, padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>

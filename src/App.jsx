@@ -6,7 +6,7 @@ import {
 import {
   Users, TrendingUp, CheckCircle2, Clock, Search, Plus, Download,
   ArrowRight, LayoutDashboard, ClipboardList, AlertCircle, Lock,
-  List, Coins, Gem, Trophy, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, History, Layers, MoreVertical, FileText, FileDown, Calculator, Database
+  List, Coins, Gem, Trophy, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, History, Layers, MoreVertical, FileText, FileDown, Calculator, Database, Calendar
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 
@@ -468,10 +468,117 @@ function CategoryComparison({ leads, onNavigate }) {
   );
 }
 
-function DashboardOverview({ leads, onNavigate }) {
+
+const NAMA_BULAN = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+];
+
+const NAMA_BULAN_PENDEK = [
+  "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+  "Jul", "Agu", "Sep", "Okt", "Nov", "Des"
+];
+
+function localTodayStr() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function parseDateYmd(s) {
+  if (!s) return new Date();
+  const [y, m, d] = s.slice(0, 10).split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
+function toDateYmd(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function formatBulanTahun(ymStr) {
+  if (!ymStr) return "-";
+  const [y, m] = ymStr.split("-").map(Number);
+  const bulanName = NAMA_BULAN[(m || 1) - 1] || ymStr;
+  return `${bulanName} ${y}`;
+}
+
+function formatTanggalIndo(dateStr) {
+  if (!dateStr) return "-";
+  const [y, m, d] = dateStr.slice(0, 10).split("-").map(Number);
+  const bulanName = NAMA_BULAN[(m || 1) - 1] || "";
+  return `${d} ${bulanName} ${y}`;
+}
+
+function formatTanggalPendek(dateStr) {
+  if (!dateStr) return "-";
+  const [y, m, d] = dateStr.slice(0, 10).split("-").map(Number);
+  const bulanName = NAMA_BULAN_PENDEK[(m || 1) - 1] || "";
+  return `${d} ${bulanName} ${y}`;
+}
+
+function getStartOfWeek(dateStr) {
+  const d = parseDateYmd(dateStr);
+  const day = d.getDay(); // 0: Minggu, 1: Senin
+  const diff = (day === 0 ? -6 : 1) - day;
+  d.setDate(d.getDate() + diff);
+  return toDateYmd(d);
+}
+
+function getEndOfWeek(dateStr) {
+  const d = parseDateYmd(dateStr);
+  const day = d.getDay();
+  const diff = day === 0 ? 0 : 7 - day;
+  d.setDate(d.getDate() + diff);
+  return toDateYmd(d);
+}
+
+function shiftWeek(dateStr, offsetWeeks) {
+  const d = parseDateYmd(dateStr);
+  d.setDate(d.getDate() + offsetWeeks * 7);
+  return toDateYmd(d);
+}
+
+function shiftDay(dateStr, offsetDays) {
+  const d = parseDateYmd(dateStr);
+  d.setDate(d.getDate() + offsetDays);
+  return toDateYmd(d);
+}
+
+function shiftMonth(ymStr, offsetMonths) {
+  if (!ymStr) return ymStr;
+  const [y, m] = ymStr.split("-").map(Number);
+  const d = new Date(y, (m || 1) - 1 + offsetMonths, 1);
+  const ry = d.getFullYear();
+  const rm = String(d.getMonth() + 1).padStart(2, "0");
+  return `${ry}-${rm}`;
+}
+
+function DashboardOverview({ leads, onNavigate, periodMode = "all", weekStart, weekEnd }) {
   const byDate = {};
-  leads.forEach((l) => { byDate[l.tanggal] = (byDate[l.tanggal] || 0) + 1; });
-  const trendData = Object.entries(byDate).sort((a, b) => a[0].localeCompare(b[0])).map(([tanggal, jumlah]) => ({ tanggal, jumlah }));
+  leads.forEach((l) => {
+    if (l.tanggal) {
+      const d = l.tanggal.slice(0, 10);
+      byDate[d] = (byDate[d] || 0) + 1;
+    }
+  });
+
+  let trendData = [];
+  if (periodMode === "weekly" && weekStart && weekEnd) {
+    const cur = parseDateYmd(weekStart);
+    const end = parseDateYmd(weekEnd);
+    while (cur <= end) {
+      const ymd = toDateYmd(cur);
+      trendData.push({ tanggal: ymd, jumlah: byDate[ymd] || 0 });
+      cur.setDate(cur.getDate() + 1);
+    }
+  } else {
+    trendData = Object.entries(byDate).sort((a, b) => a[0].localeCompare(b[0])).map(([tanggal, jumlah]) => ({ tanggal, jumlah }));
+  }
 
   const catCounts = {};
   leads.forEach((l) => { const c = categorize(l.produk); catCounts[c] = (catCounts[c] || 0) + 1; });
@@ -491,79 +598,107 @@ function DashboardOverview({ leads, onNavigate }) {
       <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 16, marginBottom: 24 }}>
       <div style={{ background: "#fff", borderRadius: 12, padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
         <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Tren leads masuk per tanggal</div>
-        <ResponsiveContainer width="100%" height={220}>
-          <LineChart data={trendData} margin={{ top: 8, right: 12, left: -10, bottom: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#EFEEE8" />
-            <XAxis
-              dataKey="tanggal"
-              tick={{ fontSize: 10 }}
-              angle={-35}
-              textAnchor="end"
-              height={45}
-              interval="preserveStartEnd"
-              tickFormatter={(d) => (d && d.length >= 10 ? d.slice(5) : d)}
-            />
-            <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={28} />
-            <Tooltip
-              contentStyle={{ borderRadius: 8, border: "1px solid #DCD4C0", fontSize: 12 }}
-              formatter={(val) => [`${val} lead`, "Jumlah"]}
-            />
-            <Line
-              type="monotone"
-              dataKey="jumlah"
-              stroke="#0A5C36"
-              strokeWidth={2.5}
-              dot={{ r: 3.5, fill: "#0A5C36", strokeWidth: 1.5, stroke: "#fff" }}
-              activeDot={{ r: 5, fill: "#1D9E75" }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        {trendData.length === 0 ? (
+          <div style={{ height: 220, display: "flex", alignItems: "center", justifyContent: "center", color: "#888780", fontSize: 12.5, flexDirection: "column", gap: 6 }}>
+            <Calendar size={22} style={{ opacity: 0.35 }} />
+            <span>Tidak ada prospek pada rentang waktu ini</span>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={trendData} margin={{ top: 8, right: 12, left: -10, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#EFEEE8" />
+              <XAxis
+                dataKey="tanggal"
+                tick={{ fontSize: 10 }}
+                angle={-35}
+                textAnchor="end"
+                height={45}
+                interval="preserveStartEnd"
+                tickFormatter={(d) => (d && d.length >= 10 ? d.slice(5) : d)}
+              />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={28} />
+              <Tooltip
+                contentStyle={{ borderRadius: 8, border: "1px solid #DCD4C0", fontSize: 12 }}
+                formatter={(val) => [`${val} lead`, "Jumlah"]}
+              />
+              <Line
+                type="monotone"
+                dataKey="jumlah"
+                stroke="#0A5C36"
+                strokeWidth={2.5}
+                dot={{ r: 3.5, fill: "#0A5C36", strokeWidth: 1.5, stroke: "#fff" }}
+                activeDot={{ r: 5, fill: "#1D9E75" }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </div>
       <div style={{ background: "#fff", borderRadius: 12, padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
         <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Distribusi kategori produk</div>
-        <ResponsiveContainer width="100%" height={220}>
-          <PieChart>
-            <Pie
-              data={catData}
-              dataKey="value"
-              nameKey="name"
-              cx="50%"
-              cy="42%"
-              innerRadius={38}
-              outerRadius={66}
-              cursor={onNavigate ? "pointer" : "default"}
-              onClick={(d) => onNavigate && onNavigate(d.name)}
-            >
-              {catData.map((d, i) => <Cell key={i} fill={catColors[d.name] || "#888780"} />)}
-            </Pie>
-            <Legend verticalAlign="bottom" height={44} wrapperStyle={{ fontSize: 11 }} />
-            <Tooltip />
-          </PieChart>
-        </ResponsiveContainer>
+        {catData.length === 0 ? (
+          <div style={{ height: 220, display: "flex", alignItems: "center", justifyContent: "center", color: "#888780", fontSize: 12.5, flexDirection: "column", gap: 6 }}>
+            <Calendar size={22} style={{ opacity: 0.35 }} />
+            <span>Tidak ada data kategori</span>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={220}>
+            <PieChart>
+              <Pie
+                data={catData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="42%"
+                innerRadius={38}
+                outerRadius={66}
+                cursor={onNavigate ? "pointer" : "default"}
+                onClick={(d) => onNavigate && onNavigate(d.name)}
+              >
+                {catData.map((d, i) => <Cell key={i} fill={catColors[d.name] || "#888780"} />)}
+              </Pie>
+              <Legend verticalAlign="bottom" height={44} wrapperStyle={{ fontSize: 11 }} />
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        )}
       </div>
       <div style={{ background: "#fff", borderRadius: 12, padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
         <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Distribusi status keseluruhan</div>
-        <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={statusData} margin={{ bottom: 12 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#EFEEE8" />
-            <XAxis dataKey="name" tick={{ fontSize: 9.5 }} angle={-20} textAnchor="end" height={38} interval={0} />
-            <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={28} />
-            <Tooltip cursor={{ fill: "rgba(0,0,0,0.04)" }} />
-            <Bar dataKey="jumlah" fill="#378ADD" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        {statusData.length === 0 ? (
+          <div style={{ height: 220, display: "flex", alignItems: "center", justifyContent: "center", color: "#888780", fontSize: 12.5, flexDirection: "column", gap: 6 }}>
+            <Calendar size={22} style={{ opacity: 0.35 }} />
+            <span>Tidak ada data status</span>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={statusData} margin={{ bottom: 12 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#EFEEE8" />
+              <XAxis dataKey="name" tick={{ fontSize: 9.5 }} angle={-20} textAnchor="end" height={38} interval={0} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={28} />
+              <Tooltip cursor={{ fill: "rgba(0,0,0,0.04)" }} />
+              <Bar dataKey="jumlah" fill="#378ADD" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
       <div style={{ background: "#fff", borderRadius: 12, padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
         <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Distribusi sumber prospek</div>
-        <ResponsiveContainer width="100%" height={220}>
-          <PieChart>
-            <Pie data={sumberData} dataKey="value" nameKey="name" cx="50%" cy="42%" innerRadius={38} outerRadius={66}>
-              {sumberData.map((_, i) => <Cell key={i} fill={sumberColors[i % sumberColors.length]} />)}
-            </Pie>
-            <Legend verticalAlign="bottom" height={44} wrapperStyle={{ fontSize: 10.5 }} />
-            <Tooltip />
-          </PieChart>
-        </ResponsiveContainer>
+        {sumberData.length === 0 ? (
+          <div style={{ height: 220, display: "flex", alignItems: "center", justifyContent: "center", color: "#888780", fontSize: 12.5, flexDirection: "column", gap: 6 }}>
+            <Calendar size={22} style={{ opacity: 0.35 }} />
+            <span>Tidak ada data sumber</span>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={220}>
+            <PieChart>
+              <Pie data={sumberData} dataKey="value" nameKey="name" cx="50%" cy="42%" innerRadius={38} outerRadius={66}>
+                {sumberData.map((_, i) => <Cell key={i} fill={sumberColors[i % sumberColors.length]} />)}
+              </Pie>
+              <Legend verticalAlign="bottom" height={44} wrapperStyle={{ fontSize: 10.5 }} />
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
     </div>
@@ -1960,10 +2095,122 @@ function ReportPanel({ leads }) {
 function AdminDashboard({ leads, onUpdate, onOpenSimulasi }) {
   const [tab, setTab] = useState("Dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const totalLeads = leads.length;
-  const disbursed = leads.filter((l) => l.status === "DISBURSED").length;
-  const activePipeline = leads.filter((l) => !["DISBURSED", "REJECTED"].includes(l.status)).length;
+
+  // Period filtering state for Dashboard
+  const [periodMode, setPeriodMode] = useState("all"); // "all" | "monthly" | "weekly" | "daily"
+
+  const latestLeadDate = useMemo(() => {
+    if (!leads || leads.length === 0) return localTodayStr();
+    const sorted = leads
+      .map((l) => (l.tanggal ? l.tanggal.slice(0, 10) : ""))
+      .filter(Boolean)
+      .sort();
+    return sorted[sorted.length - 1] || localTodayStr();
+  }, [leads]);
+
+  const currentMonthStr = useMemo(() => localTodayStr().slice(0, 7), []);
+
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const hasCurrent = leads.some((l) => l.tanggal && l.tanggal.startsWith(currentMonthStr));
+    return hasCurrent ? currentMonthStr : (leads.length > 0 && leads[leads.length - 1].tanggal ? leads[leads.length - 1].tanggal.slice(0, 7) : currentMonthStr);
+  });
+  const [selectedWeekDate, setSelectedWeekDate] = useState(() => localTodayStr());
+  const [selectedDay, setSelectedDay] = useState(() => localTodayStr());
+
+  const initializedRef = useRef(false);
+  useEffect(() => {
+    if (!initializedRef.current && leads && leads.length > 0) {
+      initializedRef.current = true;
+      const hasCurrent = leads.some((l) => l.tanggal && l.tanggal.startsWith(currentMonthStr));
+      const targetMonth = hasCurrent ? currentMonthStr : latestLeadDate.slice(0, 7);
+      setSelectedMonth(targetMonth);
+      setSelectedWeekDate(latestLeadDate);
+      setSelectedDay(latestLeadDate);
+    }
+  }, [leads, currentMonthStr, latestLeadDate]);
+
+  const availableMonths = useMemo(() => {
+    const set = new Set();
+    leads.forEach((l) => {
+      if (l.tanggal && l.tanggal.length >= 7) {
+        set.add(l.tanggal.slice(0, 7));
+      }
+    });
+    set.add(localTodayStr().slice(0, 7));
+    if (selectedMonth) set.add(selectedMonth);
+    return [...set].sort().reverse();
+  }, [leads, selectedMonth]);
+
+  const weekStart = useMemo(() => getStartOfWeek(selectedWeekDate || localTodayStr()), [selectedWeekDate]);
+  const weekEnd = useMemo(() => getEndOfWeek(selectedWeekDate || localTodayStr()), [selectedWeekDate]);
+
+  const filteredDashboardLeads = useMemo(() => {
+    if (periodMode === "all") return leads;
+    if (periodMode === "monthly") {
+      return leads.filter((l) => l.tanggal && l.tanggal.startsWith(selectedMonth));
+    }
+    if (periodMode === "weekly") {
+      return leads.filter((l) => {
+        const d = l.tanggal ? l.tanggal.slice(0, 10) : "";
+        return d >= weekStart && d <= weekEnd;
+      });
+    }
+    if (periodMode === "daily") {
+      return leads.filter((l) => {
+        const d = l.tanggal ? l.tanggal.slice(0, 10) : "";
+        return d === selectedDay;
+      });
+    }
+    return leads;
+  }, [leads, periodMode, selectedMonth, weekStart, weekEnd, selectedDay]);
+
+  const totalLeads = filteredDashboardLeads.length;
+  const disbursed = filteredDashboardLeads.filter((l) => l.status === "DISBURSED").length;
+  const activePipeline = filteredDashboardLeads.filter((l) => !["DISBURSED", "REJECTED"].includes(l.status)).length;
   const conversion = totalLeads ? ((disbursed / totalLeads) * 100).toFixed(1) : "0.0";
+
+  const periodDescription = useMemo(() => {
+    if (periodMode === "all") return "Semua Periode (Keseluruhan)";
+    if (periodMode === "monthly") return formatBulanTahun(selectedMonth);
+    if (periodMode === "weekly") return `${formatTanggalPendek(weekStart)} – ${formatTanggalPendek(weekEnd)}`;
+    if (periodMode === "daily") return formatTanggalIndo(selectedDay);
+    return "Semua Periode";
+  }, [periodMode, selectedMonth, weekStart, weekEnd, selectedDay]);
+
+  const periodSubtext = useMemo(() => {
+    if (periodMode === "all") return "Semua kategori produk";
+    if (periodMode === "monthly") return `Bulan: ${formatBulanTahun(selectedMonth)}`;
+    if (periodMode === "weekly") return `Minggu: ${formatTanggalPendek(weekStart)} – ${formatTanggalPendek(weekEnd)}`;
+    if (periodMode === "daily") return `Hari: ${formatTanggalPendek(selectedDay)}`;
+    return "Periode terpilih";
+  }, [periodMode, selectedMonth, weekStart, weekEnd, selectedDay]);
+
+  const periodNavBtnStyle = {
+    background: "#F1EFE8",
+    border: "1px solid #DCD4C0",
+    borderRadius: 6,
+    width: 28,
+    height: 28,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    color: "#3d3d3a",
+    flexShrink: 0,
+  };
+
+  const quickResetBtnStyle = {
+    background: "#EAF3DE",
+    border: "1px solid #A3D9A5",
+    color: "#0A5C36",
+    fontSize: 11.5,
+    fontWeight: 600,
+    padding: "4px 10px",
+    borderRadius: 6,
+    cursor: "pointer",
+    marginLeft: 4,
+    whiteSpace: "nowrap",
+  };
 
   const tabs = [
     { key: "Dashboard", label: "Dashboard", icon: LayoutDashboard, color: "#378ADD" },
@@ -2040,18 +2287,242 @@ function AdminDashboard({ leads, onUpdate, onOpenSimulasi }) {
 
       <div style={{ flex: 1, minWidth: 0 }}>
         {tab === "Dashboard" && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
-            <KpiCard icon={<Users size={16} color="#0A5C36" />} label="Total leads masuk" value={totalLeads} sub="Semua kategori produk" color="#0A5C36" />
-            <KpiCard icon={<CheckCircle2 size={16} color="#1D9E75" />} label="Leads berhasil cair" value={disbursed} sub="Status: DISBURSED" color="#1D9E75" />
-            <KpiCard icon={<TrendingUp size={16} color="#A37F15" />} label="Rasio konversi" value={`${conversion}%`} sub="Leads cair vs total leads" color="#A37F15" />
-            <KpiCard icon={<Clock size={16} color="#378ADD" />} label="Prospek active pipeline" value={activePipeline} sub="Masih dalam tindak lanjut" color="#378ADD" />
-          </div>
+          <>
+            <div style={{
+              background: "#fff",
+              borderRadius: 12,
+              padding: "14px 18px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+              marginBottom: 16,
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: "#EAF3DE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Calendar size={18} color="#0A5C36" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "#1f2937" }}>Periode Tampilan Dashboard</div>
+                    <div style={{ fontSize: 12, color: "#888780" }}>
+                      Menampilkan <strong>{filteredDashboardLeads.length}</strong> leads • <span style={{ color: "#0A5C36", fontWeight: 600 }}>{periodDescription}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mode Selector Tabs */}
+                <div style={{ display: "flex", background: "#F1EFE8", padding: 3, borderRadius: 8, gap: 2 }}>
+                  {[
+                    { key: "all", label: "Semua (All)" },
+                    { key: "monthly", label: "Bulanan" },
+                    { key: "weekly", label: "Mingguan" },
+                    { key: "daily", label: "Harian" },
+                  ].map((m) => {
+                    const active = periodMode === m.key;
+                    return (
+                      <button
+                        key={m.key}
+                        onClick={() => setPeriodMode(m.key)}
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: 6,
+                          border: "none",
+                          background: active ? "#0A5C36" : "transparent",
+                          color: active ? "#fff" : "#4B5563",
+                          fontSize: 12.5,
+                          fontWeight: active ? 600 : 500,
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {m.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Sub-selector row */}
+              {periodMode !== "all" && (
+                <div style={{
+                  marginTop: 12,
+                  paddingTop: 12,
+                  borderTop: "1px solid #F1EFE8",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: 10,
+                }}>
+                  <div style={{ fontSize: 12.5, color: "#555", fontWeight: 500 }}>
+                    {periodMode === "monthly" && "Pilih Bulan:"}
+                    {periodMode === "weekly" && "Navigasi Rentang Minggu:"}
+                    {periodMode === "daily" && "Pilih Tanggal:"}
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    {periodMode === "monthly" && (
+                      <>
+                        <button
+                          onClick={() => setSelectedMonth((m) => shiftMonth(m, -1))}
+                          title="Bulan sebelumnya"
+                          style={periodNavBtnStyle}
+                        >
+                          <ChevronLeft size={15} />
+                        </button>
+                        <select
+                          value={selectedMonth}
+                          onChange={(e) => setSelectedMonth(e.target.value)}
+                          style={{
+                            padding: "5px 12px",
+                            borderRadius: 6,
+                            border: "1px solid #DCD4C0",
+                            fontSize: 12.5,
+                            fontWeight: 600,
+                            background: "#fff",
+                            color: "#0A5C36",
+                            cursor: "pointer",
+                            outline: "none",
+                          }}
+                        >
+                          {availableMonths.map((ym) => (
+                            <option key={ym} value={ym}>
+                              {formatBulanTahun(ym)}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => setSelectedMonth((m) => shiftMonth(m, 1))}
+                          title="Bulan berikutnya"
+                          style={periodNavBtnStyle}
+                        >
+                          <ChevronRight size={15} />
+                        </button>
+                        <button
+                          onClick={() => setSelectedMonth(localTodayStr().slice(0, 7))}
+                          style={quickResetBtnStyle}
+                        >
+                          Bulan Ini
+                        </button>
+                      </>
+                    )}
+
+                    {periodMode === "weekly" && (
+                      <>
+                        <button
+                          onClick={() => setSelectedWeekDate((d) => shiftWeek(d, -1))}
+                          title="Minggu sebelumnya"
+                          style={periodNavBtnStyle}
+                        >
+                          <ChevronLeft size={15} />
+                        </button>
+                        <div style={{
+                          fontSize: 12.5,
+                          fontWeight: 600,
+                          color: "#0A5C36",
+                          background: "#EAF3DE",
+                          padding: "5px 12px",
+                          borderRadius: 6,
+                          border: "1px solid #C4E2BD",
+                        }}>
+                          {formatTanggalPendek(weekStart)} – {formatTanggalPendek(weekEnd)}
+                        </div>
+                        <button
+                          onClick={() => setSelectedWeekDate((d) => shiftWeek(d, 1))}
+                          title="Minggu berikutnya"
+                          style={periodNavBtnStyle}
+                        >
+                          <ChevronRight size={15} />
+                        </button>
+                        <input
+                          type="date"
+                          value={selectedWeekDate}
+                          onChange={(e) => e.target.value && setSelectedWeekDate(e.target.value)}
+                          title="Pilih tanggal patokan minggu"
+                          style={{
+                            padding: "4px 8px",
+                            borderRadius: 6,
+                            border: "1px solid #DCD4C0",
+                            fontSize: 12,
+                            background: "#fff",
+                            cursor: "pointer",
+                          }}
+                        />
+                        <button
+                          onClick={() => setSelectedWeekDate(localTodayStr())}
+                          style={quickResetBtnStyle}
+                        >
+                          Minggu Ini
+                        </button>
+                      </>
+                    )}
+
+                    {periodMode === "daily" && (
+                      <>
+                        <button
+                          onClick={() => setSelectedDay((d) => shiftDay(d, -1))}
+                          title="Hari sebelumnya"
+                          style={periodNavBtnStyle}
+                        >
+                          <ChevronLeft size={15} />
+                        </button>
+                        <input
+                          type="date"
+                          value={selectedDay}
+                          onChange={(e) => e.target.value && setSelectedDay(e.target.value)}
+                          style={{
+                            padding: "4px 10px",
+                            borderRadius: 6,
+                            border: "1px solid #DCD4C0",
+                            fontSize: 12.5,
+                            fontWeight: 600,
+                            color: "#0A5C36",
+                            background: "#fff",
+                            cursor: "pointer",
+                          }}
+                        />
+                        <div style={{ fontSize: 12.5, fontWeight: 600, color: "#3d3d3a", padding: "0 4px" }}>
+                          ({formatTanggalIndo(selectedDay)})
+                        </div>
+                        <button
+                          onClick={() => setSelectedDay((d) => shiftDay(d, 1))}
+                          title="Hari berikutnya"
+                          style={periodNavBtnStyle}
+                        >
+                          <ChevronRight size={15} />
+                        </button>
+                        <button
+                          onClick={() => setSelectedDay(localTodayStr())}
+                          style={quickResetBtnStyle}
+                        >
+                          Hari Ini
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
+              <KpiCard icon={<Users size={16} color="#0A5C36" />} label="Total leads masuk" value={totalLeads} sub={periodSubtext} color="#0A5C36" />
+              <KpiCard icon={<CheckCircle2 size={16} color="#1D9E75" />} label="Leads berhasil cair" value={disbursed} sub="Status: DISBURSED" color="#1D9E75" />
+              <KpiCard icon={<TrendingUp size={16} color="#A37F15" />} label="Rasio konversi" value={`${conversion}%`} sub="Leads cair vs total periode" color="#A37F15" />
+              <KpiCard icon={<Clock size={16} color="#378ADD" />} label="Prospek active pipeline" value={activePipeline} sub="Masih dalam tindak lanjut" color="#378ADD" />
+            </div>
+          </>
         )}
 
-        <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 14 }}>{activeTab.label}</div>
+        <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 14 }}>
+          {tab === "Dashboard" ? `Detail Performa (${periodDescription})` : activeTab.label}
+        </div>
 
         {tab === "Dashboard" ? (
-          <DashboardOverview leads={leads} onNavigate={setTab} />
+          <DashboardOverview
+            leads={filteredDashboardLeads}
+            onNavigate={setTab}
+            periodMode={periodMode}
+            weekStart={weekStart}
+            weekEnd={weekEnd}
+          />
         ) : tab === "Semua Prospek" ? (
           <AllLeadsPanel leads={leads} onUpdate={onUpdate} onOpenSimulasi={onOpenSimulasi} />
         ) : tab === "Leaderboard" ? (

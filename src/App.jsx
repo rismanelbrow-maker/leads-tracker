@@ -4,7 +4,7 @@ import {
   PieChart, Pie, Cell, Legend, LabelList
 } from "recharts";
 import {
-  Users, TrendingUp, CheckCircle2, Clock, Search, Plus, Download,
+  Users, TrendingUp, CheckCircle2, Clock, Search, Plus, Download, Printer,
   ArrowRight, LayoutDashboard, ClipboardList, AlertCircle, Lock,
   List, Coins, Gem, Trophy, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, History, Layers, MoreVertical, FileText, FileDown, Calculator, Database, Calendar
 } from "lucide-react";
@@ -3472,9 +3472,15 @@ function AmanahCalculator({ prefill }) {
         <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
           <button
             onClick={handleDownloadPdf}
-            style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13.5, fontWeight: 600, padding: "10px 18px", borderRadius: 6, border: "1px solid #1F4D43", background: "#1F4D43", color: "#fff", cursor: "pointer" }}
+            style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13.5, fontWeight: 600, padding: "10px 18px", borderRadius: 6, border: "1px solid #1F4D43", background: "#1F4D43", color: "#fff", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
           >
-            Cetak Ringkasan untuk Nasabah
+            <Printer size={16} /> Cetak Ringkasan untuk Nasabah
+          </button>
+          <button
+            onClick={handleDownloadPng}
+            style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13.5, fontWeight: 600, padding: "10px 18px", borderRadius: 6, border: "1px solid #DCD4C0", background: "#fff", color: "#16302C", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
+          >
+            <Download size={16} /> Ekspor Gambar (PNG)
           </button>
         </div>
       </div>
@@ -3614,8 +3620,9 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
     const rowH = 28;
     const width = Math.max(labelW + colW * tenorCount, 620);
     const canvasWidth = width + padding * 2;
-    const headerH = cfg.subLabel ? 168 : 156;
-    const canvasHeight = headerH + 34 + customerRows.length * rowH + 54;
+    const dividerY = cfg.subLabel ? 68 : 56;
+    const headerH = dividerY + 88;
+    const canvasHeight = headerH + 30 + customerRows.length * rowH + 48;
 
     const canvas = document.createElement("canvas");
     const scale = 2;
@@ -3649,20 +3656,20 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
     // Judul & subjudul tengah
     ctx.textAlign = "center";
     const centerX = padding + width / 2;
-    ctx.fillStyle = "#123530";
-    ctx.font = "bold 16px Georgia, serif";
-    ctx.fillText(isRtt ? "PT PEGADAIAN - UNIT USAHA SYARIAH" : "PEGADAIAN SYARIAH DAAN MOGOT", centerX, 28);
-    ctx.font = "12px Arial, sans-serif";
-    ctx.fillStyle = "#3F5A54";
-    ctx.fillText(isRtt ? "SLIP SIMULASI PENCAIRAN & ANGSURAN - RAHN TASJILY TANAH (RTT)" : `Simulasi Pencairan & Angsuran Nasabah - ${cfg.label}`, centerX, 46);
+    ctx.fillStyle = "#0A5C36";
+    ctx.font = "bold 15px Arial, sans-serif";
+    ctx.fillText("PEGADAIAN SYARIAH DAAN MOGOT", centerX, 28);
+    ctx.fillStyle = "#5F5E5A";
+    ctx.font = "11.5px Arial, sans-serif";
+    ctx.fillText(`Ringkasan Simulasi Pembiayaan ${cfg.label}`, centerX, 44);
     if (cfg.subLabel) {
-      ctx.font = "10.5px Arial, sans-serif";
-      ctx.fillStyle = "#6F837D";
-      ctx.fillText(cfg.subLabel, centerX, 61);
+      ctx.font = "10px Arial, sans-serif";
+      ctx.fillStyle = "#888780";
+      ctx.fillText(cfg.subLabel, centerX, 58);
     }
 
-    const dividerY = cfg.subLabel ? 72 : 62;
-    ctx.strokeStyle = "#123530";
+    // Garis pembatas header
+    ctx.strokeStyle = "#0A5C36";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(padding, dividerY);
@@ -3672,7 +3679,7 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
     // Reset teks ke kiri untuk data nasabah
     ctx.textAlign = "left";
     ctx.font = "11.5px Arial, sans-serif";
-    ctx.fillStyle = "#16302C";
+    ctx.fillStyle = "#2C2C2A";
     const infoStartY = dividerY + 18;
     ctx.fillText(`Nama Calon Rahin (Nasabah): ${nama || "-"}`, padding, infoStartY);
     ctx.fillText(`Nilai Taksiran Agunan ${isRtt ? "(Tanah/Bangunan)" : "/ Kendaraan"}: ${formatRupiah(taksiranNum)}`, padding, infoStartY + 18);
@@ -3680,30 +3687,30 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
     ctx.fillText(`Tanggal Simulasi Cetak: ${tanggalCetak()}`, padding, infoStartY + 54);
 
     let y = headerH;
-    ctx.fillStyle = "#F6F3EA";
-    ctx.fillRect(padding, y, width, 30);
-    ctx.fillStyle = "#3F5A54";
+    ctx.fillStyle = "#F8F9FA";
+    ctx.fillRect(padding, y, width, 28);
+    ctx.fillStyle = "#3d3d3a";
     ctx.font = "bold 11px Arial, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Rincian Komponen / Tenor", padding + 8, y + 19);
+    ctx.fillText("Rincian Komponen / Tenor", padding + 8, y + 18);
     ctx.textAlign = "right";
     result.perTenor.forEach((r, i) => {
-      ctx.fillText(`${r.tenor} Bulan`, padding + labelW + colW * (i + 1) - 8, y + 19);
+      ctx.fillText(`${r.tenor} Bulan`, padding + labelW + colW * (i + 1) - 8, y + 18);
     });
-    y += 30;
+    y += 28;
 
     customerRows.forEach((row) => {
       if (row.strong) {
         ctx.fillStyle = "#EEF6F0";
         ctx.fillRect(padding, y, width, rowH);
       }
-      ctx.strokeStyle = "#DCD4C0";
+      ctx.strokeStyle = "#E5E3DA";
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(padding, y + rowH);
       ctx.lineTo(padding + width, y + rowH);
       ctx.stroke();
-      ctx.fillStyle = row.strong ? "#2F6F4F" : "#16302C";
+      ctx.fillStyle = row.strong ? "#0A5C36" : "#2C2C2A";
       ctx.font = `${row.strong ? "bold " : ""}11px Arial, sans-serif`;
       ctx.textAlign = "left";
       ctx.fillText(row.label, padding + 8, y + 18);
@@ -3715,10 +3722,13 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
       y += rowH;
     });
 
+    ctx.strokeStyle = "#E5E3DA";
+    ctx.strokeRect(padding, headerH, width, 28 + customerRows.length * rowH);
+
     ctx.textAlign = "left";
-    ctx.fillStyle = "#3F5A54";
-    ctx.font = "10px Arial, sans-serif";
-    ctx.fillText(isRtt ? "Catatan: Simulasi SE No. 142/2026. Angsuran dibulatkan ke kelipatan Rp 1.000. Biaya admin flat Rp 70.000." : "Catatan: rincian ini bersifat simulasi dan dapat berubah mengikuti ketentuan tarif/approval yang berlaku di Pegadaian Syariah.", padding, y + 24);
+    ctx.fillStyle = "#888780";
+    ctx.font = "9.5px Arial, sans-serif";
+    ctx.fillText(isRtt ? "Catatan: Simulasi SE No. 142/2026. Angsuran dibulatkan ke kelipatan Rp 1.000. Biaya admin flat Rp 70.000." : "Catatan: rincian ini bersifat simulasi dan dapat berubah mengikuti ketentuan tarif/approval yang berlaku di Pegadaian Syariah.", padding, y + 20);
 
     const link = document.createElement("a");
     link.download = `simulasi-${productKey}-${nama ? nama.replace(/\s+/g, "_").toLowerCase() : "nasabah"}-${todayStr()}.png`;
@@ -3735,13 +3745,10 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
       })
       .join("");
 
-    const titleHtml = isRtt
-      ? `<h1 style="margin: 0; font-size: 17px; color: #123530;">PT PEGADAIAN - UNIT USAHA SYARIAH</h1>
-         <div class="sub" style="margin-top: 3px; font-weight: 700; color: #123530;">SLIP SIMULASI PENCAIRAN &amp; ANGSURAN NASABAH - RAHN TASJILY TANAH (RTT)</div>
-         <div class="ketentuan">Agunan Sertifikat Tanah / Bangunan (SHM / SHGB) - Sesuai Ketentuan SE No. 142 Tahun 2026</div>`
-      : `<h1 style="margin: 0; font-size: 18px; color: #123530;">PEGADAIAN SYARIAH DAAN MOGOT</h1>
-         <div class="sub" style="margin-top: 3px; font-weight: 500;">Simulasi Pencairan &amp; Angsuran Nasabah - ${escapeHtml(cfg.label)}</div>
-         ${cfg.subLabel ? `<div class="ketentuan">${escapeHtml(cfg.subLabel)}</div>` : ""}`;
+    const titleHtml = `
+      <h1 style="color: #0A5C36; font-size: 18px; margin: 0; font-weight: 700; letter-spacing: 0.3px;">PEGADAIAN SYARIAH DAAN MOGOT</h1>
+      <div class="sub" style="margin-top: 3px; font-weight: 500;">Ringkasan Simulasi Pembiayaan ${escapeHtml(cfg.label)}</div>
+      ${cfg.subLabel ? `<div class="ketentuan" style="color: #888780; font-size: 10px; margin-top: 2px;">${escapeHtml(cfg.subLabel)}</div>` : ""}`;
 
     const catatanHtml = isRtt
       ? `<div class="note">
@@ -3767,23 +3774,23 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
 
     const html = `<!doctype html>
 <html lang="id"><head><meta charset="utf-8" />
-<title>Simulasi ${escapeHtml(cfg.label)} - Pegadaian Syariah</title>
+<title>Simulasi ${escapeHtml(cfg.label)} - Pegadaian Syariah Daan Mogot</title>
 <style>
   @page { margin: 16mm 14mm; }
-  body { font-family: Georgia, 'Iowan Old Style', serif; color: #16302C; padding: 12px; }
-  h1 { font-size: 18px; color: #123530; margin: 0; font-weight: 700; letter-spacing: 0.3px; }
-  .sub { font-family: Arial, sans-serif; font-size: 11.5px; color: #3F5A54; margin-bottom: 2px; }
-  .ketentuan { font-family: Arial, sans-serif; font-size: 10px; color: #6F837D; margin-top: 2px; }
-  h2 { font-family: Arial, sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #B5872B; margin: 16px 0 6px; }
-  table { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11.5px; }
-  th { text-align: right; padding: 7px 8px; color: #3F5A54; font-size: 11px; border-bottom: 2px solid #123530; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #2C2C2A; margin: 0; padding: 20px; }
+  h1 { color: #0A5C36; font-size: 18px; margin: 0; font-weight: 700; letter-spacing: 0.3px; }
+  .sub { color: #5F5E5A; font-size: 12px; margin-bottom: 3px; }
+  .ketentuan { color: #888780; font-size: 10px; margin-top: 2px; }
+  h2 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.8px; color: #B5872B; margin: 16px 0 6px; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
+  th { text-align: right; padding: 8px 10px; background: #F8F9FA; color: #5F5E5A; border-bottom: 1px solid #E5E3DA; font-size: 11px; }
   th:first-child, td:first-child { text-align: left; }
-  td { text-align: right; padding: 7px 8px; border-bottom: 1px solid #DCD4C0; }
-  tr.strong td { font-weight: 700; color: #2F6F4F; background: #EEF6F0; }
-  .note { font-family: Arial, sans-serif; font-size: 10.5px; color: #3F5A54; margin-top: 14px; padding-top: 8px; border-top: 1px dashed #DCD4C0; line-height: 1.5; }
+  td { text-align: right; padding: 7px 9px; border-bottom: 1px solid #F1EFE8; }
+  tr.strong td { font-weight: 700; color: #0A5C36; background: #EEF6F0; }
+  .note { font-size: 11px; color: #5F5E5A; margin-top: 16px; padding-top: 10px; border-top: 1px dashed #DCD4C0; line-height: 1.5; }
 </style></head>
 <body>
-  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #123530; padding-bottom: 12px; margin-bottom: 14px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0A5C36; padding-bottom: 12px; margin-bottom: 14px;">
     <div style="width: 120px; display: flex; justify-content: flex-start; align-items: center;">
       <img src="${DANANTARA_LOGO}" alt="Logo Danantara Indonesia" style="height: 30px; width: auto; object-fit: contain;" />
     </div>
@@ -4170,13 +4177,19 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
         <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>
           <button
             onClick={handleDownloadPdf}
-            style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13.5, fontWeight: 600, padding: "10px 18px", borderRadius: 6, border: "1px solid #1F4D43", background: "#1F4D43", color: "#fff", cursor: "pointer" }}
+            style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13.5, fontWeight: 600, padding: "10px 18px", borderRadius: 6, border: "1px solid #1F4D43", background: "#1F4D43", color: "#fff", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
           >
-            Cetak Ringkasan untuk Nasabah
+            <Printer size={16} /> Cetak Ringkasan untuk Nasabah
+          </button>
+          <button
+            onClick={handleDownloadPng}
+            style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13.5, fontWeight: 600, padding: "10px 18px", borderRadius: 6, border: "1px solid #DCD4C0", background: "#fff", color: "#16302C", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
+          >
+            <Download size={16} /> Ekspor Gambar (PNG)
           </button>
           <button
             onClick={handleCopyWa}
-            style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13.5, fontWeight: 600, padding: "10px 18px", borderRadius: 6, border: "1px solid #25D366", background: "#E8F5E9", color: "#1B5E20", cursor: "pointer" }}
+            style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13.5, fontWeight: 600, padding: "10px 18px", borderRadius: 6, border: "1px solid #25D366", background: "#E8F5E9", color: "#1B5E20", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
           >
             {copiedWa ? "Tersalin ke Clipboard!" : "Salin Pesan WhatsApp"}
           </button>

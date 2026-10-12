@@ -2807,18 +2807,16 @@ function roundUpTo(value, negDigits) {
 // --- Tabel & konfigurasi khusus untuk Rahn Tasjily Tanah (RTT) SE No. 142 Tahun 2026 ---
 
 const RTT_NOTARIS_TABLE = [
-  { min: 1, max: 50000000, jenis: "SKMHT / Legalisasi", biaya: 350000 },
-  { min: 50000001, max: 100000000, jenis: "APHT / HT Peringkat I", biaya: 750000 },
-  { min: 100000001, max: 150000000, jenis: "APHT / HT Peringkat I", biaya: 1150000 },
-  { min: 150000001, max: 200000000, jenis: "APHT / HT Peringkat I", biaya: 1500000 },
+  { min: 1, max: 100000000, jenis: "SKMHT", biaya: 1000000 },
+  { min: 100000001, max: 200000000, jenis: "SHT", biaya: 3400000 },
 ];
 
 function lookupNotarisRtt(uangPinjaman) {
   if (!uangPinjaman || uangPinjaman <= 0) return { jenis: "-", biaya: 0 };
-  for (const row of RTT_NOTARIS_TABLE) {
-    if (uangPinjaman <= row.max) return row;
+  if (uangPinjaman <= 100000000) {
+    return { min: 1, max: 100000000, jenis: "SKMHT", biaya: 1000000 };
   }
-  return { jenis: "APHT / HT Peringkat I", biaya: 1500000 };
+  return { min: 100000001, max: Infinity, jenis: "SHT", biaya: 3400000 };
 }
 
 const RTT_IJK_RATE = {
@@ -3581,7 +3579,7 @@ function AgunanCalculator({ productKey, prefill }) {
 *Nilai Taksiran Agunan ${isRtt ? "(Tanah/Bangunan)" : ""}:* ${formatRupiah(taksiranNum)}
 *Uang Pinjaman (UP):* ${formatRupiah(upNum)}
 *Maksimal Plafon LTV 70%${isRtt ? " (Maks. 200Jt)" : ""}:* ${formatRupiah(result.plafonLtv)}
-${isRtt ? `*Biaya Administrasi (Flat):* Rp 70.000\n*Biaya Notaris / APHT (${result.notarisInfo.jenis}):* ${formatRupiah(result.notarisInfo.biaya)}` : `*Diskon Mu'nah Akad:* ${(result.diskonMunahAkad * 100).toFixed(2)}%\n*Biaya Mu'nah Akad:* ${formatRupiah(result.munahAkad)}\n*Biaya ${result.notarisInfo.jenis}:* ${formatRupiah(result.notarisInfo.biaya)}`}
+${isRtt ? `*Biaya Administrasi (Flat):* Rp 70.000\n*Biaya Notaris / Hak Tanggungan (${result.notarisInfo.jenis}):* ${formatRupiah(result.notarisInfo.biaya)}` : `*Diskon Mu'nah Akad:* ${(result.diskonMunahAkad * 100).toFixed(2)}%\n*Biaya Mu'nah Akad:* ${formatRupiah(result.munahAkad)}\n*Biaya ${result.notarisInfo.jenis}:* ${formatRupiah(result.notarisInfo.biaya)}`}
 *Diskon Mu'nah Pemeliharaan:* ${(result.diskonMunahPemeliharaan * 100).toFixed(2)}%
 
 *RINGKASAN ESTIMASI PENCAIRAN BERSIH & ANGSURAN:*
@@ -3750,9 +3748,10 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
           <strong>CATATAN &amp; KETENTUAN SYARIAH:</strong><br />
           1. Perhitungan di atas merupakan estimasi/simulasi pencairan &amp; angsuran berdasarkan SE No. 142 Tahun 2026.<br />
           2. Biaya Administrasi (Mu'nah Akad) ditetapkan sebesar Rp70.000,- (flat).<br />
-          3. Besaran pencairan bersih dan angsuran bersifat final setelah verifikasi fisik sertifikat &amp; persetujuan Pemutus Kredit.<br />
-          4. Total angsuran per bulan sudah dibulatkan naik ke kelipatan Rp1.000 terdekat.<br />
-          5. Akad yang digunakan adalah Akad Rahn Tasjily dan Akad Mu'nah Pemeliharaan dengan agunan Sertifikat Tanah (SHM/SHGB).
+          3. Biaya Notaris / Hak Tanggungan: SKMHT Rp1.000.000,- (UP &le; Rp100 Juta) atau SHT Rp3.400.000,- (UP &gt; Rp100 Juta).<br />
+          4. Besaran pencairan bersih dan angsuran bersifat final setelah verifikasi fisik sertifikat &amp; persetujuan Pemutus Kredit.<br />
+          5. Total angsuran per bulan sudah dibulatkan naik ke kelipatan Rp1.000 terdekat.<br />
+          6. Akad yang digunakan adalah Akad Rahn Tasjily dan Akad Mu'nah Pemeliharaan dengan agunan Sertifikat Tanah (SHM/SHGB).
         </div>
         <div style="margin-top: 34px; display: flex; justify-content: space-between; font-family: Arial, sans-serif; font-size: 11px;">
           <div style="text-align: center; width: 200px;">

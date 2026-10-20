@@ -3435,6 +3435,96 @@ function suggestedInternalUP(hargaOtr) {
   return Math.floor(alt90 / 100000) * 100000;
 }
 
+function downloadCanvasAsPdf(canvas, filename) {
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
+  const base64 = dataUrl.split(",")[1];
+  const binStr = atob(base64);
+  const imgBytes = new Uint8Array(binStr.length);
+  for (let i = 0; i < binStr.length; i++) {
+    imgBytes[i] = binStr.charCodeAt(i);
+  }
+
+  const imgW = canvas.width;
+  const imgH = canvas.height;
+  const pdfW = 595.28; // Lebar standar A4 (pt)
+  const pdfH = Number(((pdfW * imgH) / imgW).toFixed(2));
+
+  const encoder = new TextEncoder();
+  const chunks = [];
+  const offsets = [];
+  let currentOffset = 0;
+
+  const pushStr = (str) => {
+    const bytes = encoder.encode(str);
+    chunks.push(bytes);
+    currentOffset += bytes.length;
+  };
+  const pushBytes = (bytes) => {
+    chunks.push(bytes);
+    currentOffset += bytes.length;
+  };
+  const startObj = (id) => {
+    offsets[id] = currentOffset;
+    pushStr(`${id} 0 obj\n`);
+  };
+  const endObj = () => {
+    pushStr("endobj\n");
+  };
+
+  pushStr("%PDF-1.4\n");
+
+  startObj(1);
+  pushStr("<< /Type /Catalog /Pages 2 0 R >>\n");
+  endObj();
+
+  startObj(2);
+  pushStr("<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n");
+  endObj();
+
+  startObj(3);
+  pushStr(
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pdfW} ${pdfH}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>\n`
+  );
+  endObj();
+
+  startObj(4);
+  pushStr(
+    `<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imgBytes.length} >>\nstream\n`
+  );
+  pushBytes(imgBytes);
+  pushStr("\nendstream\n");
+  endObj();
+
+  const contentStr = `q\n${pdfW} 0 0 ${pdfH} 0 0 cm\n/Im0 Do\nQ\n`;
+  const contentBytes = encoder.encode(contentStr);
+  startObj(5);
+  pushStr(`<< /Length ${contentBytes.length} >>\nstream\n`);
+  pushBytes(contentBytes);
+  pushStr("\nendstream\n");
+  endObj();
+
+  const xrefOffset = currentOffset;
+  pushStr("xref\n0 6\n0000000000 65535 f \n");
+  for (let i = 1; i <= 5; i++) {
+    const off = String(offsets[i]).padStart(10, "0");
+    pushStr(`${off} 00000 n \n`);
+  }
+
+  pushStr(
+    `trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`
+  );
+
+  const blob = new Blob(chunks, { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename.endsWith(".pdf") ? filename : `${filename}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function AmanahCalculator({ prefill }) {
   const [mode, setModeRaw] = useState("eksternal");
   const [namaMotor, setNamaMotor] = useState(prefill?.nama ? `Unit prospek ${prefill.nama}` : "");
@@ -3606,72 +3696,164 @@ function AmanahCalculator({ prefill }) {
     setTimeout(() => { win.focus(); win.print(); }, 400);
   };
 
-  const handleDownloadInternalPdf = () => {
-    const headCells = result.perTenor.map((r) => `<th>${r.tenor} Bulan</th>`).join("");
-    const bodyRows = SIMULASI_TABLE_ROWS.map((row) => {
-      const cells = result.perTenor.map((r) => `<td>${formatRupiah(r[row.key])}</td>`).join("");
-      const cls = row.highlight ? "strong" : row.total ? "total" : "";
-      return `<tr class="${cls}"><td>${escapeHtml(row.label)}</td>${cells}</tr>`;
-    }).join("");
+  const handleDownloadInternalPdf = async () => {
+    const [logoDanantara, logoPegadaian] = await Promise.all([
+      loadImage(DANANTARA_LOGO),
+      loadImage(PEGADAIAN_LOGO),
+    ]);
 
-    const html = `<!doctype html>
-<html lang="id"><head><meta charset="utf-8" /><title>PDF Internal Simulasi Amanah - Pegadaian Syariah Daan Mogot</title>
-<style>
-  @page { margin: 16mm 14mm; }
-  body { font-family: Arial, Helvetica, sans-serif; color: #2C2C2A; margin: 0; padding: 20px; }
-  h1 { color: #0A5C36; font-size: 18px; margin: 0; font-weight: 700; letter-spacing: 0.3px; }
-  .sub { color: #5F5E5A; font-size: 12px; margin-bottom: 3px; }
-  h2 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.8px; color: #B5872B; margin: 16px 0 6px; font-weight: 700; }
-  .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; background: #F8F9FA; border: 1px solid #E5E3DA; border-radius: 8px; padding: 12px 14px; font-size: 12px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
-  th { text-align: right; padding: 8px 10px; background: #F8F9FA; color: #5F5E5A; border-bottom: 1px solid #E5E3DA; font-size: 11px; }
-  th:first-child, td:first-child { text-align: left; }
-  td { text-align: right; padding: 7px 9px; border-bottom: 1px solid #F1EFE8; }
-  tr.total td { font-weight: 700; color: #123530; border-top: 1px solid #3F5A54; }
-  tr.strong td { font-weight: 700; color: #0A5C36; background: #EEF6F0; }
-  .note { margin-top: 16px; font-size: 11px; color: #5F5E5A; padding-top: 10px; border-top: 1px dashed #DCD4C0; }
-</style></head>
-<body>
-  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0A5C36; padding-bottom: 12px; margin-bottom: 14px;">
-    <div style="width: 120px; display: flex; justify-content: flex-start; align-items: center;">
-      <img src="${DANANTARA_LOGO}" alt="Logo Danantara Indonesia" style="height: 30px; width: auto; object-fit: contain;" />
-    </div>
-    <div style="flex: 1; text-align: center; padding: 0 10px;">
-      <h1>PEGADAIAN SYARIAH DAAN MOGOT</h1>
-      <div class="sub" style="margin-top: 3px; font-weight: 600;">DOKUMEN INTERNAL — DATA LENGKAP SIMULASI PEMBIAYAAN AMANAH</div>
-    </div>
-    <div style="width: 120px; display: flex; justify-content: flex-end; align-items: center;">
-      <img src="${PEGADAIAN_LOGO}" alt="Logo Pegadaian Syariah" style="height: 38px; width: auto; object-fit: contain;" />
-    </div>
-  </div>
-  <h2>I. Data Kendaraan &amp; Parameter Perhitungan</h2>
-  <div class="param-grid">
-    <div><strong>Kategori Nasabah:</strong> ${mode === "internal" ? "Nasabah Internal" : "Nasabah Eksternal"}</div>
-    <div><strong>Nama Kendaraan / Motor:</strong> ${escapeHtml(namaMotor || "-")}</div>
-    <div><strong>Harga Motor / OTR:</strong> ${formatRupiah(otrNum)}</div>
-    <div><strong>Uang Pinjaman (UP):</strong> ${formatRupiah(result.uangPinjaman)}</div>
-    <div><strong>DP Kendaraan:</strong> ${formatRupiah(result.dpKendaraan)}</div>
-    <div><strong>Rasio UP / OTR:</strong> ${result.rasio.toFixed(2)}%</div>
-    <div><strong>Tarif Sewa Modal:</strong> ${(SIMULASI_SEWA_MODAL[mode] * 100).toFixed(3)}% / Bulan</div>
-    <div><strong>Diskon Ujrah:</strong> ${(result.diskonUjrah * 100).toFixed(2)}%</div>
-    <div><strong>Biaya ${escapeHtml(result.notarisInfo.jenis)}:</strong> ${formatRupiah(result.notarisInfo.biaya)}</div>
-    <div><strong>Tanggal Simulasi Cetak:</strong> ${new Date().toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" })}</div>
-  </div>
-  <h2>II. Matriks Lengkap Komponen Biaya &amp; Angsuran per Tenor</h2>
-  <table>
-    <thead><tr><th>Komponen Simulasi / Tenor</th>${headCells}</tr></thead>
-    <tbody>${bodyRows}</tbody>
-  </table>
-  <div class="note">Dokumen Internal Pegadaian Syariah Daan Mogot — Rincian perhitungan lengkap simulasi pembiayaan Amanah.</div>
-</body></html>`;
+    const tenorCount = result.perTenor.length;
+    const labelW = 240;
+    const colW = 115;
+    const padding = 28;
+    const rowH = 28;
+    const width = Math.max(labelW + colW * tenorCount, 680);
+    const canvasWidth = width + padding * 2;
 
-    const win = window.open("", "_blank");
-    if (!win) { alert("Popup diblokir browser. Izinkan popup untuk situs ini agar bisa mengunduh."); return; }
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
-    win.onload = () => { win.focus(); win.print(); };
-    setTimeout(() => { win.focus(); win.print(); }, 400);
+    const paramPairs = [
+      ["Kategori Nasabah", mode === "internal" ? "Nasabah Internal" : "Nasabah Eksternal"],
+      ["Nama Kendaraan / Motor", namaMotor || "-"],
+      ["Harga Motor / OTR", formatRupiah(otrNum)],
+      ["Uang Pinjaman (UP)", formatRupiah(result.uangPinjaman)],
+      ["DP Kendaraan", formatRupiah(result.dpKendaraan)],
+      ["Rasio UP / OTR", `${result.rasio.toFixed(2)}%`],
+      ["Tarif Sewa Modal", `${(SIMULASI_SEWA_MODAL[mode] * 100).toFixed(3)}% / Bulan`],
+      ["Diskon Ujrah", `${(result.diskonUjrah * 100).toFixed(2)}%`],
+      [`Biaya ${result.notarisInfo.jenis}`, formatRupiah(result.notarisInfo.biaya)],
+      ["Tanggal Simulasi Cetak", new Date().toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })],
+    ];
+    const paramRowCount = Math.ceil(paramPairs.length / 2);
+    const paramBoxH = paramRowCount * 22 + 16;
+
+    const canvasHeight = 70 + 26 + paramBoxH + 30 + 28 + SIMULASI_TABLE_ROWS.length * rowH + 56;
+    const canvas = document.createElement("canvas");
+    const scale = 2.5;
+    canvas.width = canvasWidth * scale;
+    canvas.height = canvasHeight * scale;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(scale, scale);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+    if (logoDanantara) {
+      const dH = 26;
+      const dRatio = (logoDanantara.naturalWidth && logoDanantara.naturalHeight)
+        ? logoDanantara.naturalWidth / logoDanantara.naturalHeight
+        : 3.78;
+      ctx.drawImage(logoDanantara, padding, 18, dH * dRatio, dH);
+    }
+    if (logoPegadaian) {
+      const pH = 34;
+      const pRatio = (logoPegadaian.naturalWidth && logoPegadaian.naturalHeight)
+        ? logoPegadaian.naturalWidth / logoPegadaian.naturalHeight
+        : 1.88;
+      const pW = pH * pRatio;
+      ctx.drawImage(logoPegadaian, padding + width - pW, 14, pW, pH);
+    }
+
+    ctx.textAlign = "center";
+    const centerX = padding + width / 2;
+    ctx.fillStyle = "#0A5C36";
+    ctx.font = "bold 15px Arial, sans-serif";
+    ctx.fillText("PEGADAIAN SYARIAH DAAN MOGOT", centerX, 28);
+    ctx.fillStyle = "#2C2C2A";
+    ctx.font = "bold 11.5px Arial, sans-serif";
+    ctx.fillText("DOKUMEN INTERNAL — DATA LENGKAP SIMULASI PEMBIAYAAN AMANAH", centerX, 45);
+
+    ctx.strokeStyle = "#0A5C36";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(padding, 58);
+    ctx.lineTo(padding + width, 58);
+    ctx.stroke();
+
+    let y = 76;
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#B5872B";
+    ctx.font = "bold 11px Arial, sans-serif";
+    ctx.fillText("1. DATA KENDARAAN & PARAMETER PERHITUNGAN", padding, y);
+    y += 8;
+
+    ctx.fillStyle = "#F8F9FA";
+    ctx.fillRect(padding, y, width, paramBoxH);
+    ctx.strokeStyle = "#E5E3DA";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(padding, y, width, paramBoxH);
+
+    const halfW = width / 2;
+    for (let i = 0; i < paramPairs.length; i++) {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const px = padding + 12 + col * halfW;
+      const py = y + 20 + row * 22;
+      ctx.fillStyle = "#5F5E5A";
+      ctx.font = "11px Arial, sans-serif";
+      ctx.fillText(`${paramPairs[i][0]}:`, px, py);
+      ctx.fillStyle = "#16302C";
+      ctx.font = "bold 11px Arial, sans-serif";
+      ctx.fillText(String(paramPairs[i][1]), px + 145, py);
+    }
+    y += paramBoxH + 22;
+
+    ctx.fillStyle = "#B5872B";
+    ctx.font = "bold 11px Arial, sans-serif";
+    ctx.fillText("2. MATRIKS LENGKAP KOMPONEN BIAYA & ANGSURAN PER TENOR", padding, y);
+    y += 8;
+
+    const tableStartY = y;
+    ctx.fillStyle = "#F8F9FA";
+    ctx.fillRect(padding, y, width, 28);
+    ctx.fillStyle = "#3d3d3a";
+    ctx.font = "bold 11px Arial, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Komponen Simulasi / Tenor", padding + 10, y + 18);
+    ctx.textAlign = "right";
+    result.perTenor.forEach((r, i) => {
+      ctx.fillText(`${r.tenor} Bulan`, padding + labelW + colW * (i + 1) - 10, y + 18);
+    });
+    y += 28;
+
+    SIMULASI_TABLE_ROWS.forEach((row) => {
+      if (row.highlight) {
+        ctx.fillStyle = "#EEF6F0";
+        ctx.fillRect(padding, y, width, rowH);
+      } else if (row.total) {
+        ctx.fillStyle = "#F6F3EA";
+        ctx.fillRect(padding, y, width, rowH);
+      }
+      ctx.strokeStyle = "#E5E3DA";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padding, y + rowH);
+      ctx.lineTo(padding + width, y + rowH);
+      ctx.stroke();
+
+      ctx.fillStyle = row.highlight ? "#0A5C36" : row.total ? "#123530" : "#2C2C2A";
+      ctx.font = `${row.highlight || row.total ? "bold " : ""}11px Arial, sans-serif`;
+      ctx.textAlign = "left";
+      ctx.fillText(row.label, padding + 10, y + 18);
+      ctx.textAlign = "right";
+      result.perTenor.forEach((r, i) => {
+        ctx.fillText(formatRupiah(r[row.key]), padding + labelW + colW * (i + 1) - 10, y + 18);
+      });
+      y += rowH;
+    });
+
+    ctx.strokeStyle = "#DCD4C0";
+    ctx.strokeRect(padding, tableStartY, width, 28 + SIMULASI_TABLE_ROWS.length * rowH);
+
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#6F837D";
+    ctx.font = "10px Arial, sans-serif";
+    ctx.fillText(
+      "Dokumen Internal Pegadaian Syariah Daan Mogot — Berisi data lengkap parameter dan matriks simulasi pembiayaan Amanah.",
+      padding,
+      y + 22
+    );
+
+    const slug = namaMotor ? namaMotor.replace(/\s+/g, "-").toLowerCase() : "produk";
+    downloadCanvasAsPdf(canvas, `pdf-internal-amanah-${slug}-${todayStr()}.pdf`);
   };
 
   return (
@@ -3775,7 +3957,7 @@ function AmanahCalculator({ prefill }) {
             onClick={handleDownloadInternalPdf}
             style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13.5, fontWeight: 600, padding: "10px 18px", borderRadius: 6, border: "1px solid #B5872B", background: "#FDF8EE", color: "#7A5813", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
           >
-            <FileText size={16} /> PDF Internal
+            <FileDown size={16} /> PDF Internal
           </button>
         </div>
       </div>
@@ -3798,7 +3980,6 @@ function AgunanCalculator({ productKey, prefill }) {
   const [rpc, setRpc] = useState(prefill?.rpc ? String(prefill.rpc) : "");
   const [taksiran, setTaksiran] = useState(prefill?.taksiran ? String(prefill.taksiran) : "");
   const [up, setUp] = useState(prefill?.up ? String(prefill.up) : "");
-  const [copiedWa, setCopiedWa] = useState(false);
 
   useEffect(() => {
     if (prefill?.nama) setNama(prefill.nama);
@@ -3883,43 +4064,6 @@ function AgunanCalculator({ productKey, prefill }) {
   ];
 
   const tanggalCetak = () => new Date().toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" });
-
-  const handleCopyWa = () => {
-    const activeTenors = result.perTenor.filter((r) => r.isAvailable);
-    const headerWa = isKur
-      ? `*SIMULASI PENCAIRAN & ANGSURAN - PEGADAIAN ARRUM EXPRESS LOAN KUR*\n*PT PEGADAIAN - UNIT USAHA SYARIAH*\n_Program Pemerintah Subsidi KUR Syariah - Bebas Biaya Administrasi (Juklak KUR 2025)_`
-      : isRtt
-        ? `*SIMULASI PENCAIRAN & ANGSURAN - PEGADAIAN RAHN TASJILY TANAH (RTT)*\n*PT PEGADAIAN - UNIT USAHA SYARIAH*\n_Agunan Sertifikat Tanah / Bangunan (SHM/SHGB) - Sesuai Ketentuan SE No. 142 Tahun 2026_`
-        : `*SIMULASI PENCAIRAN & ANGSURAN NASABAH*\n*PEGADAIAN SYARIAH*\n_${cfg.titleLong}_${cfg.subLabel ? `\n_${cfg.subLabel}_` : ""}`;
-
-    const text = `${headerWa}
---------------------------------------------------
-*Nama Calon Rahin:* ${nama || "-"}${isKur ? `\n*Skema KUR Terpilih:* ${result.skemaInfo.nama}` : ""}
-*Pendapatan Bersih (RPC):* ${formatRupiah(rpcNum)}
-*Nilai Taksiran Agunan ${isRtt ? "(Tanah/Bangunan)" : isKur ? "/ Marhun" : ""}:* ${formatRupiah(taksiranNum)}
-*Uang Pinjaman (UP):* ${formatRupiah(upNum)}
-*Maksimal Plafon LTV 70%${isRtt ? " (Maks. 200Jt)" : ""}:* ${formatRupiah(result.plafonLtv)}${isKur ? `\n*Plafon Maksimal Skema:* ${formatRupiah(result.skemaInfo.maxUp)}` : ""}
-${isKur ? `*Biaya Administrasi / Mu'nah Akad:* Rp 0 (Bebas Biaya Admin)\n*Biaya Imbal Jasa Kafalah (Asuransi KUR):* Rp 0 (Ditanggung Perusahaan)\n*Tarif Mu'nah Standar:* ${(result.tarifPemeliharaan * 100).toFixed(3)}% x Taksiran / Bulan` : isRtt ? `*Biaya Administrasi (Flat):* Rp 70.000\n*Biaya ${result.notarisInfo.jenis}:* ${formatRupiah(result.notarisInfo.biaya)}` : `*Diskon Mu'nah Akad:* ${(result.diskonMunahAkad * 100).toFixed(2)}%\n*Biaya Mu'nah Akad:* ${formatRupiah(result.munahAkad)}\n*Biaya ${result.notarisInfo.jenis}:* ${formatRupiah(result.notarisInfo.biaya)}`}
-*Diskon Mu'nah Pemeliharaan:* ${(result.diskonMunahPemeliharaan * 100).toFixed(2)}%
-
-*RINGKASAN ESTIMASI PENCAIRAN BERSIH & ANGSURAN:*
-${activeTenors.map((r) => `• *Tenor ${r.tenor} Bulan:*
-   - Total Biaya Potongan: ${formatRupiah(r.totalPotongan)}
-   - Pencairan Bersih (NET): ${formatRupiah(r.pencairanBersih)}
-   - Angsuran Pokok: ${formatRupiah(r.angsuranPokok)}/bln
-   - Mu'nah Pemeliharaan Bersih: ${formatRupiah(r.munahBersih)}/bln
-   - *TOTAL ANGSURAN: ${formatRupiah(r.totalAngsuran)}/bln*
-   - Status DBR (Maks. 40% RPC): ${r.statusDbr}
-   - Status Plafon Rekomendasi: ${r.statusRekomendasi}`).join("\n\n")}
-
-_Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah mengikuti ketentuan/approval resmi yang berlaku di Pegadaian Syariah._`;
-
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText(text);
-      setCopiedWa(true);
-      setTimeout(() => setCopiedWa(false), 3000);
-    }
-  };
 
   const handleDownloadPng = async () => {
     const [logoDanantara, logoPegadaian] = await Promise.all([
@@ -4168,48 +4312,249 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
     setTimeout(() => { win.focus(); win.print(); }, 400);
   };
 
-  const handleDownloadInternalPdf = () => {
-    const headCells = result.perTenor.map((r) => `<th>${r.tenor} Bulan</th>`).join("");
+  const handleDownloadInternalPdf = async () => {
+    const [logoDanantara, logoPegadaian] = await Promise.all([
+      loadImage(DANANTARA_LOGO),
+      loadImage(PEGADAIAN_LOGO),
+    ]);
 
-    const pencairanHtml = pencairanRows
-      .map((row) => {
-        const cells = result.perTenor
-          .map((r) => {
-            const val = row.isRaw ? row.get(r) : r.isAvailable ? formatRupiah(row.get(r)) : "-";
-            return `<td>${val}</td>`;
-          })
-          .join("");
-        const cls = row.highlight ? "strong" : row.total ? "total" : "";
-        return `<tr class="${cls}"><td>${escapeHtml(row.label)}</td>${cells}</tr>`;
-      })
-      .join("");
+    const tenorCount = result.perTenor.length;
+    const labelW = 300;
+    const colW = tenorCount > 4 ? 96 : 112;
+    const padding = 26;
+    const rowH = 25;
+    const width = Math.max(labelW + colW * tenorCount, 760);
+    const canvasWidth = width + padding * 2;
 
-    const angsuranBodyRows = angsuranRows
-      .map((row) => {
-        const cells = result.perTenor
-          .map((r) => {
-            const val = row.isRaw ? row.get(r) : r.isAvailable ? formatRupiah(row.get(r)) : "-";
-            return `<td>${val}</td>`;
-          })
-          .join("");
-        const cls = row.highlight ? "strong" : row.total ? "total" : "";
-        return `<tr class="${cls}"><td>${escapeHtml(row.label)}</td>${cells}</tr>`;
-      })
-      .join("");
+    const paramPairs = [
+      ["Nama Calon Rahin (Nasabah)", nama || "-"],
+      ["Tanggal Simulasi Cetak", tanggalCetak()],
+      ...(isKur
+        ? [
+            ["Skema KUR Terpilih", result.skemaInfo.nama],
+            ["Batas Plafon Skema", `${formatRupiah(result.skemaInfo.minUp)} s.d. ${formatRupiah(result.skemaInfo.maxUp)}`],
+          ]
+        : []),
+      ["Pendapatan Bersih Bulanan (RPC)", formatRupiah(rpcNum)],
+      [`Nilai Taksiran Agunan ${isRtt ? "(Tanah/Bangunan)" : isKur ? "/ Marhun" : "/ Kendaraan"}`, formatRupiah(taksiranNum)],
+      ["Uang Pinjaman / Marhun Bih (UP)", formatRupiah(upNum)],
+      ["Maksimal Plafon LTV 70%", formatRupiah(result.plafonLtv)],
+      ["Rasio UP terhadap Taksiran", `${(result.rasio * 100).toFixed(2)}%`],
+      [
+        isKur ? "Tarif Mu'nah Standar / Bulan" : isRtt ? "Biaya Administrasi Flat" : "Diskon & Biaya Mu'nah Akad",
+        isKur
+          ? `${(result.tarifPemeliharaan * 100).toFixed(3)}% x Taksiran`
+          : isRtt
+            ? "Rp 70.000 (Flat SE 142/2026)"
+            : `${(result.diskonMunahAkad * 100).toFixed(2)}% (${formatRupiah(result.munahAkad)})`,
+      ],
+      ["Diskon Mu'nah Pemeliharaan", `${(result.diskonMunahPemeliharaan * 100).toFixed(2)}%`],
+      [
+        isKur ? "Biaya Admin & Kafalah KUR" : `Biaya ${result.notarisInfo.jenis}`,
+        isKur ? "Rp 0 (Gratis / Ditanggung)" : formatRupiah(result.notarisInfo.biaya),
+      ],
+    ];
+    const paramRowCount = Math.ceil(paramPairs.length / 2);
+    const paramBoxH = paramRowCount * 21 + 14;
 
-    const kaliAngsuranCells = result.perTenor
-      .map((r) => `<td>${!r.isAvailable ? "-" : rpcNum && r.kaliAngsuran ? `${r.kaliAngsuran.toFixed(2)}x` : "-"}</td>`)
-      .join("");
-    const dbrCells = result.perTenor
-      .map((r) => `<td>${!r.isAvailable ? "-" : rpcNum && r.dbr ? `${(r.dbr * 100).toFixed(2)}%` : "-"}</td>`)
-      .join("");
-    const statusDbrCells = result.perTenor
-      .map((r) => {
-        const color = r.isAvailable && rpcNum ? (r.layak ? "#0A5C36" : "#A32D2D") : "#5F5E5A";
-        return `<td style="font-weight:700;color:${color};">${!r.isAvailable ? escapeHtml(r.statusDbr) : !rpcNum ? "-" : escapeHtml(r.statusDbr)}</td>`;
-      })
-      .join("");
+    const sec2Rows = pencairanRows.length;
+    const sec3Rows = angsuranRows.length + 3;
+    const sec4Rows = isKur ? 5 : 4;
 
+    const dividerY = cfg.subLabel ? 68 : 56;
+    const canvasHeight =
+      dividerY +
+      26 +
+      paramBoxH +
+      26 + 26 + sec2Rows * rowH +
+      26 + 26 + sec3Rows * rowH +
+      26 + 26 + sec4Rows * rowH +
+      52;
+
+    const canvas = document.createElement("canvas");
+    const scale = 2.5;
+    canvas.width = canvasWidth * scale;
+    canvas.height = canvasHeight * scale;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(scale, scale);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+    if (logoDanantara) {
+      const dH = 26;
+      const dRatio = (logoDanantara.naturalWidth && logoDanantara.naturalHeight)
+        ? logoDanantara.naturalWidth / logoDanantara.naturalHeight
+        : 3.78;
+      ctx.drawImage(logoDanantara, padding, 18, dH * dRatio, dH);
+    }
+    if (logoPegadaian) {
+      const pH = 34;
+      const pRatio = (logoPegadaian.naturalWidth && logoPegadaian.naturalHeight)
+        ? logoPegadaian.naturalWidth / logoPegadaian.naturalHeight
+        : 1.88;
+      const pW = pH * pRatio;
+      ctx.drawImage(logoPegadaian, padding + width - pW, 14, pW, pH);
+    }
+
+    ctx.textAlign = "center";
+    const centerX = padding + width / 2;
+    ctx.fillStyle = "#0A5C36";
+    ctx.font = "bold 15px Arial, sans-serif";
+    ctx.fillText("PEGADAIAN SYARIAH DAAN MOGOT", centerX, 26);
+    ctx.fillStyle = "#2C2C2A";
+    ctx.font = "bold 11.5px Arial, sans-serif";
+    ctx.fillText(`DOKUMEN INTERNAL — MATRIKS LENGKAP SIMULASI ${cfg.label.toUpperCase()}`, centerX, 43);
+    if (cfg.subLabel) {
+      ctx.fillStyle = "#6F837D";
+      ctx.font = "10px Arial, sans-serif";
+      ctx.fillText(cfg.subLabel, centerX, 57);
+    }
+
+    ctx.strokeStyle = "#0A5C36";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(padding, dividerY);
+    ctx.lineTo(padding + width, dividerY);
+    ctx.stroke();
+
+    let y = dividerY + 18;
+
+    // 1. Parameter Input & Ringkasan Metrik
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#B5872B";
+    ctx.font = "bold 11px Arial, sans-serif";
+    ctx.fillText("1. PARAMETER INPUT SIMULASI NASABAH & RINGKASAN METRIK", padding, y);
+    y += 7;
+
+    ctx.fillStyle = "#F8F9FA";
+    ctx.fillRect(padding, y, width, paramBoxH);
+    ctx.strokeStyle = "#E5E3DA";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(padding, y, width, paramBoxH);
+
+    const halfW = width / 2;
+    for (let i = 0; i < paramPairs.length; i++) {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const px = padding + 10 + col * halfW;
+      const py = y + 18 + row * 21;
+      ctx.fillStyle = "#5F5E5A";
+      ctx.font = "10.5px Arial, sans-serif";
+      ctx.fillText(`${paramPairs[i][0]}:`, px, py);
+      ctx.fillStyle = "#16302C";
+      ctx.font = "bold 10.5px Arial, sans-serif";
+      ctx.fillText(String(paramPairs[i][1]), px + 185, py);
+    }
+    y += paramBoxH + 18;
+
+    const drawTableHeader = (title, firstColLabel) => {
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#B5872B";
+      ctx.font = "bold 11px Arial, sans-serif";
+      ctx.fillText(title, padding, y);
+      y += 7;
+      const startY = y;
+      ctx.fillStyle = "#F8F9FA";
+      ctx.fillRect(padding, y, width, 26);
+      ctx.strokeStyle = "#123530";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(padding, y + 26);
+      ctx.lineTo(padding + width, y + 26);
+      ctx.stroke();
+
+      ctx.fillStyle = "#3F5A54";
+      ctx.font = "bold 10.5px Arial, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText(firstColLabel, padding + 8, y + 17);
+      ctx.textAlign = "right";
+      result.perTenor.forEach((r, i) => {
+        ctx.fillText(`${r.tenor} Bulan`, padding + labelW + colW * (i + 1) - 8, y + 17);
+      });
+      y += 26;
+      return startY;
+    };
+
+    const drawDataRow = (label, getVal, opts = {}) => {
+      if (opts.highlight) {
+        ctx.fillStyle = "#EEF6F0";
+        ctx.fillRect(padding, y, width, rowH);
+      } else if (opts.total) {
+        ctx.fillStyle = "#F6F3EA";
+        ctx.fillRect(padding, y, width, rowH);
+      }
+      ctx.strokeStyle = "#E5E3DA";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padding, y + rowH);
+      ctx.lineTo(padding + width, y + rowH);
+      ctx.stroke();
+
+      ctx.fillStyle = opts.highlight ? "#0A5C36" : opts.total ? "#123530" : "#2C2C2A";
+      ctx.font = `${opts.highlight || opts.total || opts.bold ? "bold " : ""}10.5px Arial, sans-serif`;
+      ctx.textAlign = "left";
+      ctx.fillText(label, padding + 8, y + 16);
+
+      ctx.textAlign = "right";
+      result.perTenor.forEach((r, i) => {
+        const cellX = padding + labelW + colW * (i + 1) - 8;
+        if (opts.getColor) {
+          ctx.fillStyle = opts.getColor(r);
+          ctx.font = "bold 10px Arial, sans-serif";
+        } else {
+          ctx.fillStyle = opts.highlight ? "#0A5C36" : opts.total ? "#123530" : "#2C2C2A";
+          ctx.font = `${opts.highlight || opts.total || opts.bold ? "bold " : ""}10.5px Arial, sans-serif`;
+        }
+        ctx.fillText(String(getVal(r)), cellX, y + 16);
+      });
+      y += rowH;
+    };
+
+    // 2. Matriks Proyeksi Pencairan Bersih per Tenor
+    const t2Start = drawTableHeader("2. MATRIKS PROYEKSI PENCAIRAN BERSIH PER TENOR", "Komponen Biaya / Tenor");
+    pencairanRows.forEach((row) => {
+      drawDataRow(
+        row.label,
+        (r) => (row.isRaw ? row.get(r) : r.isAvailable ? formatRupiah(row.get(r)) : "-"),
+        { highlight: row.highlight, total: row.total }
+      );
+    });
+    ctx.strokeStyle = "#DCD4C0";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(padding, t2Start, width, 26 + sec2Rows * rowH);
+    y += 18;
+
+    // 3. Rincian Angsuran Bulanan, Beban Mu'nah, & Kelayakan DBR
+    const t3Start = drawTableHeader("3. RINCIAN ANGSURAN BULANAN, BEBAN MU'NAH, & KELAYAKAN DBR", "Komponen Angsuran / Tenor");
+    angsuranRows.forEach((row) => {
+      drawDataRow(
+        row.label,
+        (r) => (row.isRaw ? row.get(r) : r.isAvailable ? formatRupiah(row.get(r)) : "-"),
+        { highlight: row.highlight, total: row.total }
+      );
+    });
+    drawDataRow("Pendapatan Bersih Bulanan (x Kali Angsuran)", (r) =>
+      !r.isAvailable ? "-" : rpcNum && r.kaliAngsuran ? `${r.kaliAngsuran.toFixed(2)}x` : "-"
+    );
+    drawDataRow("Rasio DBR (Beban Angsuran / RPC)", (r) =>
+      !r.isAvailable ? "-" : rpcNum && r.dbr ? `${(r.dbr * 100).toFixed(2)}%` : "-"
+    );
+    drawDataRow(
+      "Status Kelayakan DBR (Maks. 40% RPC)",
+      (r) => (!r.isAvailable ? r.statusDbr : !rpcNum ? "-" : r.statusDbr),
+      {
+        bold: true,
+        getColor: (r) => (r.isAvailable && rpcNum ? (r.layak ? "#0A5C36" : "#A32D2D") : "#5F5E5A"),
+      }
+    );
+    ctx.strokeStyle = "#DCD4C0";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(padding, t3Start, width, 26 + sec3Rows * rowH);
+    y += 18;
+
+    // 4. Analisis Pinjaman Rekomendasi Maksimal
+    const t4Start = drawTableHeader("4. ANALISIS PINJAMAN REKOMENDASI MAKSIMAL (PLAFON REKOMENDASI)", "Komponen Rekomendasi / Tenor");
     const plafonAgunanLabel = isKur
       ? "Plafon Maksimal Agunan (70% Taksiran Marhun)"
       : isMultiguna
@@ -4217,15 +4562,16 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
         : isRtt
           ? "Plafon Maksimal Agunan (LTV 70% Taksiran, Maks. 200Jt)"
           : "Plafon Maksimal Agunan (LTV 70% Taksiran)";
-    const plafonAgunanCells = result.perTenor
-      .map((r) => `<td>${r.isAvailable ? formatRupiah(result.plafonLtv) : "-"}</td>`)
-      .join("");
-    const plafonSkemaRow = isKur
-      ? `<tr><td>Plafon Maksimal Skema KUR Terpilih (${escapeHtml(result.skemaInfo.nama)})</td>${result.perTenor.map((r) => `<td>${r.isAvailable ? formatRupiah(r.plafonSkema) : "-"}</td>`).join("")}</tr>`
-      : "";
-    const kemampuanCells = result.perTenor
-      .map((r) => `<td>${!r.isAvailable ? "-" : rpcNum ? formatRupiah(r.kemampuanBayar) : "-"}</td>`)
-      .join("");
+    drawDataRow(plafonAgunanLabel, (r) => (r.isAvailable ? formatRupiah(result.plafonLtv) : "-"));
+    if (isKur) {
+      drawDataRow(`Plafon Maksimal Skema KUR Terpilih (${result.skemaInfo.nama})`, (r) =>
+        r.isAvailable ? formatRupiah(r.plafonSkema) : "-"
+      );
+    }
+    drawDataRow(
+      isKur ? "Plafon Maksimal Kemampuan Membayar (RPC 40%)" : "Plafon Maksimal Kemampuan Membayar (RPC)",
+      (r) => (!r.isAvailable ? "-" : rpcNum ? formatRupiah(r.kemampuanBayar) : "-")
+    );
     const rekomendasiLabel = isKur
       ? "PINJAMAN REKOMENDASI MAKSIMAL (TERKECIL LTV/SKEMA/RPC)"
       : isMultiguna
@@ -4233,106 +4579,39 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
         : isRtt
           ? "PINJAMAN REKOMENDASI MAKSIMAL (TERKECIL LTV/RPC/200JT)"
           : "PINJAMAN REKOMENDASI MAKSIMAL (TERKECIL LTV/RPC)";
-    const rekomendasiCells = result.perTenor
-      .map((r) => `<td>${!r.isAvailable ? "-" : rpcNum ? formatRupiah(r.pinjamanRekomendasi) : formatRupiah(isKur ? Math.min(result.plafonLtv, result.skemaInfo.maxUp) : result.plafonLtv)}</td>`)
-      .join("");
-    const statusRekCells = result.perTenor
-      .map((r) => {
-        const color = r.isAvailable && rpcNum && upNum > 0 ? (r.memenuhi ? "#0A5C36" : "#A32D2D") : "#5F5E5A";
-        return `<td style="font-weight:700;color:${color};">${!r.isAvailable ? escapeHtml(r.statusRekomendasi) : !rpcNum || !upNum ? "-" : escapeHtml(r.statusRekomendasi)}</td>`;
-      })
-      .join("");
+    drawDataRow(
+      rekomendasiLabel,
+      (r) =>
+        !r.isAvailable
+          ? "-"
+          : rpcNum
+            ? formatRupiah(r.pinjamanRekomendasi)
+            : formatRupiah(isKur ? Math.min(result.plafonLtv, result.skemaInfo.maxUp) : result.plafonLtv),
+      { highlight: true }
+    );
+    drawDataRow(
+      "Status Pengajuan UP (vs Plafon Rekomendasi)",
+      (r) => (!r.isAvailable ? r.statusRekomendasi : !rpcNum || !upNum ? "-" : r.statusRekomendasi),
+      {
+        bold: true,
+        getColor: (r) => (r.isAvailable && rpcNum && upNum > 0 ? (r.memenuhi ? "#0A5C36" : "#A32D2D") : "#5F5E5A"),
+      }
+    );
+    ctx.strokeStyle = "#DCD4C0";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(padding, t4Start, width, 26 + sec4Rows * rowH);
 
-    const html = `<!doctype html>
-<html lang="id"><head><meta charset="utf-8" />
-<title>PDF Internal Simulasi ${escapeHtml(cfg.label)} - Pegadaian Syariah Daan Mogot</title>
-<style>
-  @page { margin: 12mm 12mm; }
-  body { font-family: Arial, Helvetica, sans-serif; color: #2C2C2A; margin: 0; padding: 14px; }
-  h1 { color: #0A5C36; font-size: 16.5px; margin: 0; font-weight: 700; letter-spacing: 0.3px; }
-  .sub { color: #5F5E5A; font-size: 11.5px; margin-bottom: 2px; }
-  .ketentuan { color: #888780; font-size: 10px; margin-top: 2px; }
-  h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.7px; color: #B5872B; margin: 14px 0 6px; font-weight: 700; }
-  .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 18px; background: #F8F9FA; border: 1px solid #E5E3DA; border-radius: 8px; padding: 10px 14px; font-size: 11.5px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 11px; }
-  th { text-align: right; padding: 6px 8px; background: #F8F9FA; color: #5F5E5A; border-bottom: 1.5px solid #123530; font-size: 10.5px; }
-  th:first-child, td:first-child { text-align: left; }
-  td { text-align: right; padding: 6px 8px; border-bottom: 1px solid #F1EFE8; }
-  tr.total td { font-weight: 700; color: #123530; border-top: 1px solid #3F5A54; }
-  tr.strong td { font-weight: 700; color: #0A5C36; background: #EEF6F0; }
-  .note { font-size: 10.5px; color: #5F5E5A; margin-top: 12px; padding-top: 8px; border-top: 1px dashed #DCD4C0; line-height: 1.45; }
-</style></head>
-<body>
-  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0A5C36; padding-bottom: 10px; margin-bottom: 10px;">
-    <div style="width: 110px; display: flex; justify-content: flex-start; align-items: center;">
-      <img src="${DANANTARA_LOGO}" alt="Logo Danantara Indonesia" style="height: 28px; width: auto; object-fit: contain;" />
-    </div>
-    <div style="flex: 1; text-align: center; padding: 0 10px;">
-      <h1>PEGADAIAN SYARIAH DAAN MOGOT</h1>
-      <div class="sub" style="margin-top: 2px; font-weight: 600;">DOKUMEN INTERNAL — MATRIKS LENGKAP SIMULASI ${escapeHtml(cfg.label.toUpperCase())}</div>
-      ${cfg.subLabel ? `<div class="ketentuan">${escapeHtml(cfg.subLabel)}</div>` : ""}
-    </div>
-    <div style="width: 110px; display: flex; justify-content: flex-end; align-items: center;">
-      <img src="${PEGADAIAN_LOGO}" alt="Logo Pegadaian Syariah" style="height: 34px; width: auto; object-fit: contain;" />
-    </div>
-  </div>
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#6F837D";
+    ctx.font = "9.5px Arial, sans-serif";
+    ctx.fillText(
+      `Dokumen Internal Pegadaian Syariah Daan Mogot — Berisi data lengkap parameter, proyeksi pencairan bersih, rincian mu'nah, evaluasi DBR, dan plafon rekomendasi ${cfg.label}.`,
+      padding,
+      y + 20
+    );
 
-  <h2>1. Parameter Input Simulasi Nasabah &amp; Ringkasan Metrik</h2>
-  <div class="param-grid">
-    <div><strong>Nama Calon Rahin (Nasabah):</strong> ${escapeHtml(nama || "-")}</div>
-    <div><strong>Tanggal Simulasi Cetak:</strong> ${tanggalCetak()}</div>
-    ${isKur ? `<div><strong>Skema KUR Terpilih:</strong> ${escapeHtml(result.skemaInfo.nama)}</div><div><strong>Batas Plafon Skema:</strong> ${formatRupiah(result.skemaInfo.minUp)} s.d. ${formatRupiah(result.skemaInfo.maxUp)}</div>` : ""}
-    <div><strong>Pendapatan Bersih Bulanan (RPC):</strong> ${formatRupiah(rpcNum)}</div>
-    <div><strong>Nilai Taksiran Agunan ${isRtt ? "(Tanah/Bangunan)" : isKur ? "/ Marhun" : "/ Kendaraan"}:</strong> ${formatRupiah(taksiranNum)}</div>
-    <div><strong>Uang Pinjaman / Marhun Bih (UP):</strong> ${formatRupiah(upNum)}</div>
-    <div><strong>Maksimal Plafon LTV 70%:</strong> ${formatRupiah(result.plafonLtv)}</div>
-    <div><strong>Rasio UP terhadap Taksiran:</strong> ${(result.rasio * 100).toFixed(2)}%</div>
-    <div><strong>${isKur ? "Tarif Mu'nah Standar / Bulan" : isRtt ? "Biaya Administrasi Flat" : "Diskon & Biaya Mu'nah Akad"}:</strong> ${isKur ? `${(result.tarifPemeliharaan * 100).toFixed(3)}% x Taksiran` : isRtt ? "Rp 70.000 (Flat SE 142/2026)" : `${(result.diskonMunahAkad * 100).toFixed(2)}% (${formatRupiah(result.munahAkad)})`}</div>
-    <div><strong>Diskon Mu'nah Pemeliharaan:</strong> ${(result.diskonMunahPemeliharaan * 100).toFixed(2)}%</div>
-    <div><strong>${isKur ? "Biaya Admin & Kafalah KUR" : `Biaya ${escapeHtml(result.notarisInfo.jenis)}`}:</strong> ${isKur ? "Rp 0 (Gratis / Ditanggung Perusahaan)" : formatRupiah(result.notarisInfo.biaya)}</div>
-  </div>
-
-  <h2>2. Matriks Proyeksi Pencairan Bersih per Tenor</h2>
-  <table>
-    <thead><tr><th>Komponen Biaya / Tenor</th>${headCells}</tr></thead>
-    <tbody>${pencairanHtml}</tbody>
-  </table>
-
-  <h2>3. Rincian Angsuran Bulanan, Beban Mu'nah, &amp; Kelayakan DBR</h2>
-  <table>
-    <thead><tr><th>Komponen Angsuran / Tenor</th>${headCells}</tr></thead>
-    <tbody>
-      ${angsuranBodyRows}
-      <tr><td>Pendapatan Bersih Bulanan (x Kali Angsuran)</td>${kaliAngsuranCells}</tr>
-      <tr><td>Rasio DBR (Beban Angsuran / RPC)</td>${dbrCells}</tr>
-      <tr><td style="font-weight:700;">Status Kelayakan DBR (Maks. 40% RPC)</td>${statusDbrCells}</tr>
-    </tbody>
-  </table>
-
-  <h2>4. Analisis Pinjaman Rekomendasi Maksimal (Plafon Rekomendasi)</h2>
-  <table>
-    <thead><tr><th>Komponen Rekomendasi / Tenor</th>${headCells}</tr></thead>
-    <tbody>
-      <tr><td>${escapeHtml(plafonAgunanLabel)}</td>${plafonAgunanCells}</tr>
-      ${plafonSkemaRow}
-      <tr><td>${isKur ? "Plafon Maksimal Kemampuan Membayar (RPC 40%)" : "Plafon Maksimal Kemampuan Membayar (RPC)"}</td>${kemampuanCells}</tr>
-      <tr class="strong"><td>${escapeHtml(rekomendasiLabel)}</td>${rekomendasiCells}</tr>
-      <tr><td style="font-weight:700;">Status Pengajuan UP (vs Plafon Rekomendasi)</td>${statusRekCells}</tr>
-    </tbody>
-  </table>
-
-  <div class="note">
-    Dokumen Internal Pegadaian Syariah Daan Mogot — Berisi data lengkap parameter, proyeksi pencairan bersih, rincian mu'nah pemeliharaan, evaluasi DBR, dan rekomendasi plafon maksimal untuk produk ${escapeHtml(cfg.label)}.
-  </div>
-</body></html>`;
-
-    const win = window.open("", "_blank");
-    if (!win) { alert("Popup diblokir browser. Izinkan popup untuk situs ini agar bisa mengunduh."); return; }
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
-    win.onload = () => { win.focus(); win.print(); };
-    setTimeout(() => { win.focus(); win.print(); }, 400);
+    const slug = nama ? nama.replace(/\s+/g, "_").toLowerCase() : "nasabah";
+    downloadCanvasAsPdf(canvas, `pdf-internal-${productKey}-${slug}-${todayStr()}.pdf`);
   };
 
   const overLtv = taksiranNum > 0 && upNum > result.plafonLtv;
@@ -4742,7 +5021,7 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
             onClick={handleDownloadInternalPdf}
             style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13.5, fontWeight: 600, padding: "10px 18px", borderRadius: 6, border: "1px solid #B5872B", background: "#FDF8EE", color: "#7A5813", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
           >
-            <FileText size={16} /> PDF Internal
+            <FileDown size={16} /> PDF Internal
           </button>
         </div>
       </div>

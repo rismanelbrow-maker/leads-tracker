@@ -3318,6 +3318,18 @@ function formatRupiah(n) {
   return "Rp " + Math.round(n || 0).toLocaleString("id-ID");
 }
 
+function parseRupiahInput(val) {
+  const digits = String(val ?? "").replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.replace(/^0+(?=\d)/, "");
+}
+
+function formatRupiahInput(val) {
+  const digits = parseRupiahInput(val);
+  if (!digits) return "";
+  return "Rp " + Number(digits).toLocaleString("id-ID");
+}
+
 const simLabelStyle = {
   display: "block",
   fontFamily: "'Helvetica Neue', Arial, sans-serif",
@@ -3616,11 +3628,11 @@ function AmanahCalculator({ prefill }) {
           </div>
           <div>
             <label style={simLabelStyle}>Harga Motor / OTR (Rp)</label>
-            <input type="number" style={simFieldStyle} value={hargaOtr} onChange={(e) => setHargaOtr(e.target.value)} placeholder="Contoh: 58500000" />
+            <input type="text" inputMode="numeric" style={simFieldStyle} value={formatRupiahInput(hargaOtr)} onChange={(e) => setHargaOtr(parseRupiahInput(e.target.value))} placeholder="Contoh: Rp 58.500.000" />
           </div>
           <div>
             <label style={simLabelStyle}>Uang Pinjaman (Rp)</label>
-            <input type="number" style={simFieldStyle} value={uangPinjamanInput} onChange={(e) => setUangPinjamanInput(e.target.value)} placeholder="Contoh: 52650000" />
+            <input type="text" inputMode="numeric" style={simFieldStyle} value={formatRupiahInput(uangPinjamanInput)} onChange={(e) => setUangPinjamanInput(parseRupiahInput(e.target.value))} placeholder="Contoh: Rp 52.650.000" />
             <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 11, color: "#3F5A54", marginTop: 5 }}>
               Saran otomatis (DP 10%, dibulatkan ke bawah): {formatRupiah(suggestedUP)}.{" "}
               <button
@@ -4160,21 +4172,21 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
           )}
           <div>
             <label style={simLabelStyle}>Pendapatan Bersih Bulanan / RPC (Rp)</label>
-            <input type="number" style={simFieldStyle} value={rpc} onChange={(e) => setRpc(e.target.value)} placeholder="Contoh: 2500000" />
+            <input type="text" inputMode="numeric" style={simFieldStyle} value={formatRupiahInput(rpc)} onChange={(e) => setRpc(parseRupiahInput(e.target.value))} placeholder={isKur ? "Contoh: Rp 2.500.000" : "Contoh: Rp 15.000.000"} />
             <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 11, color: "#5F5E5A", marginTop: 4 }}>
               Digunakan untuk analisis kemampuan bayar &amp; rasio DBR (maks. 40%).
             </div>
           </div>
           <div>
             <label style={simLabelStyle}>{isRtt ? "Nilai Taksiran Agunan (Tanah / Bangunan) (Rp)" : isKur ? "Nilai Taksiran Agunan / Marhun (Rp)" : "Nilai Taksiran Agunan / Kendaraan (Rp)"}</label>
-            <input type="number" style={simFieldStyle} value={taksiran} onChange={(e) => setTaksiran(e.target.value)} placeholder={isKur ? "Contoh: 20000000" : "Contoh: 200000000"} />
+            <input type="text" inputMode="numeric" style={simFieldStyle} value={formatRupiahInput(taksiran)} onChange={(e) => setTaksiran(parseRupiahInput(e.target.value))} placeholder={isKur ? "Contoh: Rp 20.000.000" : "Contoh: Rp 200.000.000"} />
             <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 11, color: "#5F5E5A", marginTop: 4 }}>
               Dasar perhitungan plafon LTV 70% dan Mu'nah Pemeliharaan.
             </div>
           </div>
           <div style={{ gridColumn: "span 2" }}>
             <label style={simLabelStyle}>Uang Pinjaman / Marhun Bih (UP) (Rp)</label>
-            <input type="number" style={simFieldStyle} value={up} onChange={(e) => setUp(e.target.value)} placeholder={isKur ? "Contoh: 10000000" : "Contoh: 100000000"} />
+            <input type="text" inputMode="numeric" style={simFieldStyle} value={formatRupiahInput(up)} onChange={(e) => setUp(parseRupiahInput(e.target.value))} placeholder={isKur ? "Contoh: Rp 10.000.000" : "Contoh: Rp 100.000.000"} />
             <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 11.5, color: "#3F5A54", marginTop: 5 }}>
               Maksimal Plafon LTV 70%{isRtt ? " (Maks. 200Jt)" : ""}: <strong>{formatRupiah(result.plafonLtv)}</strong>
               {isKur ? (

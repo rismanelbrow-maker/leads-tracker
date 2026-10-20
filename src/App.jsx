@@ -3606,6 +3606,74 @@ function AmanahCalculator({ prefill }) {
     setTimeout(() => { win.focus(); win.print(); }, 400);
   };
 
+  const handleDownloadInternalPdf = () => {
+    const headCells = result.perTenor.map((r) => `<th>${r.tenor} Bulan</th>`).join("");
+    const bodyRows = SIMULASI_TABLE_ROWS.map((row) => {
+      const cells = result.perTenor.map((r) => `<td>${formatRupiah(r[row.key])}</td>`).join("");
+      const cls = row.highlight ? "strong" : row.total ? "total" : "";
+      return `<tr class="${cls}"><td>${escapeHtml(row.label)}</td>${cells}</tr>`;
+    }).join("");
+
+    const html = `<!doctype html>
+<html lang="id"><head><meta charset="utf-8" /><title>PDF Internal Simulasi Amanah - Pegadaian Syariah Daan Mogot</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #2C2C2A; margin: 0; padding: 20px; }
+  h1 { color: #0A5C36; font-size: 18px; margin: 0; font-weight: 700; letter-spacing: 0.3px; }
+  .sub { color: #5F5E5A; font-size: 12px; margin-bottom: 3px; }
+  h2 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.8px; color: #B5872B; margin: 16px 0 6px; font-weight: 700; }
+  .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; background: #F8F9FA; border: 1px solid #E5E3DA; border-radius: 8px; padding: 12px 14px; font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
+  th { text-align: right; padding: 8px 10px; background: #F8F9FA; color: #5F5E5A; border-bottom: 1px solid #E5E3DA; font-size: 11px; }
+  th:first-child, td:first-child { text-align: left; }
+  td { text-align: right; padding: 7px 9px; border-bottom: 1px solid #F1EFE8; }
+  tr.total td { font-weight: 700; color: #123530; border-top: 1px solid #3F5A54; }
+  tr.strong td { font-weight: 700; color: #0A5C36; background: #EEF6F0; }
+  .note { margin-top: 16px; font-size: 11px; color: #5F5E5A; padding-top: 10px; border-top: 1px dashed #DCD4C0; }
+</style></head>
+<body>
+  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0A5C36; padding-bottom: 12px; margin-bottom: 14px;">
+    <div style="width: 120px; display: flex; justify-content: flex-start; align-items: center;">
+      <img src="${DANANTARA_LOGO}" alt="Logo Danantara Indonesia" style="height: 30px; width: auto; object-fit: contain;" />
+    </div>
+    <div style="flex: 1; text-align: center; padding: 0 10px;">
+      <h1>PEGADAIAN SYARIAH DAAN MOGOT</h1>
+      <div class="sub" style="margin-top: 3px; font-weight: 600;">DOKUMEN INTERNAL — DATA LENGKAP SIMULASI PEMBIAYAAN AMANAH</div>
+    </div>
+    <div style="width: 120px; display: flex; justify-content: flex-end; align-items: center;">
+      <img src="${PEGADAIAN_LOGO}" alt="Logo Pegadaian Syariah" style="height: 38px; width: auto; object-fit: contain;" />
+    </div>
+  </div>
+  <h2>I. Data Kendaraan &amp; Parameter Perhitungan</h2>
+  <div class="param-grid">
+    <div><strong>Kategori Nasabah:</strong> ${mode === "internal" ? "Nasabah Internal" : "Nasabah Eksternal"}</div>
+    <div><strong>Nama Kendaraan / Motor:</strong> ${escapeHtml(namaMotor || "-")}</div>
+    <div><strong>Harga Motor / OTR:</strong> ${formatRupiah(otrNum)}</div>
+    <div><strong>Uang Pinjaman (UP):</strong> ${formatRupiah(result.uangPinjaman)}</div>
+    <div><strong>DP Kendaraan:</strong> ${formatRupiah(result.dpKendaraan)}</div>
+    <div><strong>Rasio UP / OTR:</strong> ${result.rasio.toFixed(2)}%</div>
+    <div><strong>Tarif Sewa Modal:</strong> ${(SIMULASI_SEWA_MODAL[mode] * 100).toFixed(3)}% / Bulan</div>
+    <div><strong>Diskon Ujrah:</strong> ${(result.diskonUjrah * 100).toFixed(2)}%</div>
+    <div><strong>Biaya ${escapeHtml(result.notarisInfo.jenis)}:</strong> ${formatRupiah(result.notarisInfo.biaya)}</div>
+    <div><strong>Tanggal Simulasi Cetak:</strong> ${new Date().toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" })}</div>
+  </div>
+  <h2>II. Matriks Lengkap Komponen Biaya &amp; Angsuran per Tenor</h2>
+  <table>
+    <thead><tr><th>Komponen Simulasi / Tenor</th>${headCells}</tr></thead>
+    <tbody>${bodyRows}</tbody>
+  </table>
+  <div class="note">Dokumen Internal Pegadaian Syariah Daan Mogot — Rincian perhitungan lengkap simulasi pembiayaan Amanah.</div>
+</body></html>`;
+
+    const win = window.open("", "_blank");
+    if (!win) { alert("Popup diblokir browser. Izinkan popup untuk situs ini agar bisa mengunduh."); return; }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => { win.focus(); win.print(); };
+    setTimeout(() => { win.focus(); win.print(); }, 400);
+  };
+
   return (
     <div className="simulator-panel" style={{ fontFamily: "Georgia, 'Iowan Old Style', serif", color: "#16302C" }}>
       <div className="simulator-header" style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16, borderBottom: "2px solid #123530", paddingBottom: 14, marginBottom: 22, flexWrap: "wrap" }}>
@@ -3668,7 +3736,6 @@ function AmanahCalculator({ prefill }) {
       <div className="simulator-result-card" style={{ background: "#fff", border: "1px solid #DCD4C0", borderRadius: 10, padding: 22 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 1, color: "#B5872B", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: 700 }}>Simulasi Angsuran per Tenor</div>
-          <ExportMenu onExportPng={handleDownloadPng} onExportPdf={handleDownloadPdf} />
         </div>
         <div className="simulator-table-wrap" style={{ overflow: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13.5 }}>
@@ -3703,6 +3770,12 @@ function AmanahCalculator({ prefill }) {
             style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13.5, fontWeight: 600, padding: "10px 18px", borderRadius: 6, border: "1px solid #DCD4C0", background: "#fff", color: "#16302C", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
           >
             <Download size={16} /> Ekspor Gambar (PNG)
+          </button>
+          <button
+            onClick={handleDownloadInternalPdf}
+            style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13.5, fontWeight: 600, padding: "10px 18px", borderRadius: 6, border: "1px solid #B5872B", background: "#FDF8EE", color: "#7A5813", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
+          >
+            <FileText size={16} /> PDF Internal
           </button>
         </div>
       </div>
@@ -4095,6 +4168,173 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
     setTimeout(() => { win.focus(); win.print(); }, 400);
   };
 
+  const handleDownloadInternalPdf = () => {
+    const headCells = result.perTenor.map((r) => `<th>${r.tenor} Bulan</th>`).join("");
+
+    const pencairanHtml = pencairanRows
+      .map((row) => {
+        const cells = result.perTenor
+          .map((r) => {
+            const val = row.isRaw ? row.get(r) : r.isAvailable ? formatRupiah(row.get(r)) : "-";
+            return `<td>${val}</td>`;
+          })
+          .join("");
+        const cls = row.highlight ? "strong" : row.total ? "total" : "";
+        return `<tr class="${cls}"><td>${escapeHtml(row.label)}</td>${cells}</tr>`;
+      })
+      .join("");
+
+    const angsuranBodyRows = angsuranRows
+      .map((row) => {
+        const cells = result.perTenor
+          .map((r) => {
+            const val = row.isRaw ? row.get(r) : r.isAvailable ? formatRupiah(row.get(r)) : "-";
+            return `<td>${val}</td>`;
+          })
+          .join("");
+        const cls = row.highlight ? "strong" : row.total ? "total" : "";
+        return `<tr class="${cls}"><td>${escapeHtml(row.label)}</td>${cells}</tr>`;
+      })
+      .join("");
+
+    const kaliAngsuranCells = result.perTenor
+      .map((r) => `<td>${!r.isAvailable ? "-" : rpcNum && r.kaliAngsuran ? `${r.kaliAngsuran.toFixed(2)}x` : "-"}</td>`)
+      .join("");
+    const dbrCells = result.perTenor
+      .map((r) => `<td>${!r.isAvailable ? "-" : rpcNum && r.dbr ? `${(r.dbr * 100).toFixed(2)}%` : "-"}</td>`)
+      .join("");
+    const statusDbrCells = result.perTenor
+      .map((r) => {
+        const color = r.isAvailable && rpcNum ? (r.layak ? "#0A5C36" : "#A32D2D") : "#5F5E5A";
+        return `<td style="font-weight:700;color:${color};">${!r.isAvailable ? escapeHtml(r.statusDbr) : !rpcNum ? "-" : escapeHtml(r.statusDbr)}</td>`;
+      })
+      .join("");
+
+    const plafonAgunanLabel = isKur
+      ? "Plafon Maksimal Agunan (70% Taksiran Marhun)"
+      : isMultiguna
+        ? "Plafon Maksimal Agunan (LTV 70% Taksiran, Maks. 100Jt)"
+        : isRtt
+          ? "Plafon Maksimal Agunan (LTV 70% Taksiran, Maks. 200Jt)"
+          : "Plafon Maksimal Agunan (LTV 70% Taksiran)";
+    const plafonAgunanCells = result.perTenor
+      .map((r) => `<td>${r.isAvailable ? formatRupiah(result.plafonLtv) : "-"}</td>`)
+      .join("");
+    const plafonSkemaRow = isKur
+      ? `<tr><td>Plafon Maksimal Skema KUR Terpilih (${escapeHtml(result.skemaInfo.nama)})</td>${result.perTenor.map((r) => `<td>${r.isAvailable ? formatRupiah(r.plafonSkema) : "-"}</td>`).join("")}</tr>`
+      : "";
+    const kemampuanCells = result.perTenor
+      .map((r) => `<td>${!r.isAvailable ? "-" : rpcNum ? formatRupiah(r.kemampuanBayar) : "-"}</td>`)
+      .join("");
+    const rekomendasiLabel = isKur
+      ? "PINJAMAN REKOMENDASI MAKSIMAL (TERKECIL LTV/SKEMA/RPC)"
+      : isMultiguna
+        ? "PINJAMAN REKOMENDASI MAKSIMAL (TERKECIL LTV/RPC/100JT)"
+        : isRtt
+          ? "PINJAMAN REKOMENDASI MAKSIMAL (TERKECIL LTV/RPC/200JT)"
+          : "PINJAMAN REKOMENDASI MAKSIMAL (TERKECIL LTV/RPC)";
+    const rekomendasiCells = result.perTenor
+      .map((r) => `<td>${!r.isAvailable ? "-" : rpcNum ? formatRupiah(r.pinjamanRekomendasi) : formatRupiah(isKur ? Math.min(result.plafonLtv, result.skemaInfo.maxUp) : result.plafonLtv)}</td>`)
+      .join("");
+    const statusRekCells = result.perTenor
+      .map((r) => {
+        const color = r.isAvailable && rpcNum && upNum > 0 ? (r.memenuhi ? "#0A5C36" : "#A32D2D") : "#5F5E5A";
+        return `<td style="font-weight:700;color:${color};">${!r.isAvailable ? escapeHtml(r.statusRekomendasi) : !rpcNum || !upNum ? "-" : escapeHtml(r.statusRekomendasi)}</td>`;
+      })
+      .join("");
+
+    const html = `<!doctype html>
+<html lang="id"><head><meta charset="utf-8" />
+<title>PDF Internal Simulasi ${escapeHtml(cfg.label)} - Pegadaian Syariah Daan Mogot</title>
+<style>
+  @page { margin: 12mm 12mm; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #2C2C2A; margin: 0; padding: 14px; }
+  h1 { color: #0A5C36; font-size: 16.5px; margin: 0; font-weight: 700; letter-spacing: 0.3px; }
+  .sub { color: #5F5E5A; font-size: 11.5px; margin-bottom: 2px; }
+  .ketentuan { color: #888780; font-size: 10px; margin-top: 2px; }
+  h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.7px; color: #B5872B; margin: 14px 0 6px; font-weight: 700; }
+  .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 18px; background: #F8F9FA; border: 1px solid #E5E3DA; border-radius: 8px; padding: 10px 14px; font-size: 11.5px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 11px; }
+  th { text-align: right; padding: 6px 8px; background: #F8F9FA; color: #5F5E5A; border-bottom: 1.5px solid #123530; font-size: 10.5px; }
+  th:first-child, td:first-child { text-align: left; }
+  td { text-align: right; padding: 6px 8px; border-bottom: 1px solid #F1EFE8; }
+  tr.total td { font-weight: 700; color: #123530; border-top: 1px solid #3F5A54; }
+  tr.strong td { font-weight: 700; color: #0A5C36; background: #EEF6F0; }
+  .note { font-size: 10.5px; color: #5F5E5A; margin-top: 12px; padding-top: 8px; border-top: 1px dashed #DCD4C0; line-height: 1.45; }
+</style></head>
+<body>
+  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0A5C36; padding-bottom: 10px; margin-bottom: 10px;">
+    <div style="width: 110px; display: flex; justify-content: flex-start; align-items: center;">
+      <img src="${DANANTARA_LOGO}" alt="Logo Danantara Indonesia" style="height: 28px; width: auto; object-fit: contain;" />
+    </div>
+    <div style="flex: 1; text-align: center; padding: 0 10px;">
+      <h1>PEGADAIAN SYARIAH DAAN MOGOT</h1>
+      <div class="sub" style="margin-top: 2px; font-weight: 600;">DOKUMEN INTERNAL — MATRIKS LENGKAP SIMULASI ${escapeHtml(cfg.label.toUpperCase())}</div>
+      ${cfg.subLabel ? `<div class="ketentuan">${escapeHtml(cfg.subLabel)}</div>` : ""}
+    </div>
+    <div style="width: 110px; display: flex; justify-content: flex-end; align-items: center;">
+      <img src="${PEGADAIAN_LOGO}" alt="Logo Pegadaian Syariah" style="height: 34px; width: auto; object-fit: contain;" />
+    </div>
+  </div>
+
+  <h2>1. Parameter Input Simulasi Nasabah &amp; Ringkasan Metrik</h2>
+  <div class="param-grid">
+    <div><strong>Nama Calon Rahin (Nasabah):</strong> ${escapeHtml(nama || "-")}</div>
+    <div><strong>Tanggal Simulasi Cetak:</strong> ${tanggalCetak()}</div>
+    ${isKur ? `<div><strong>Skema KUR Terpilih:</strong> ${escapeHtml(result.skemaInfo.nama)}</div><div><strong>Batas Plafon Skema:</strong> ${formatRupiah(result.skemaInfo.minUp)} s.d. ${formatRupiah(result.skemaInfo.maxUp)}</div>` : ""}
+    <div><strong>Pendapatan Bersih Bulanan (RPC):</strong> ${formatRupiah(rpcNum)}</div>
+    <div><strong>Nilai Taksiran Agunan ${isRtt ? "(Tanah/Bangunan)" : isKur ? "/ Marhun" : "/ Kendaraan"}:</strong> ${formatRupiah(taksiranNum)}</div>
+    <div><strong>Uang Pinjaman / Marhun Bih (UP):</strong> ${formatRupiah(upNum)}</div>
+    <div><strong>Maksimal Plafon LTV 70%:</strong> ${formatRupiah(result.plafonLtv)}</div>
+    <div><strong>Rasio UP terhadap Taksiran:</strong> ${(result.rasio * 100).toFixed(2)}%</div>
+    <div><strong>${isKur ? "Tarif Mu'nah Standar / Bulan" : isRtt ? "Biaya Administrasi Flat" : "Diskon & Biaya Mu'nah Akad"}:</strong> ${isKur ? `${(result.tarifPemeliharaan * 100).toFixed(3)}% x Taksiran` : isRtt ? "Rp 70.000 (Flat SE 142/2026)" : `${(result.diskonMunahAkad * 100).toFixed(2)}% (${formatRupiah(result.munahAkad)})`}</div>
+    <div><strong>Diskon Mu'nah Pemeliharaan:</strong> ${(result.diskonMunahPemeliharaan * 100).toFixed(2)}%</div>
+    <div><strong>${isKur ? "Biaya Admin & Kafalah KUR" : `Biaya ${escapeHtml(result.notarisInfo.jenis)}`}:</strong> ${isKur ? "Rp 0 (Gratis / Ditanggung Perusahaan)" : formatRupiah(result.notarisInfo.biaya)}</div>
+  </div>
+
+  <h2>2. Matriks Proyeksi Pencairan Bersih per Tenor</h2>
+  <table>
+    <thead><tr><th>Komponen Biaya / Tenor</th>${headCells}</tr></thead>
+    <tbody>${pencairanHtml}</tbody>
+  </table>
+
+  <h2>3. Rincian Angsuran Bulanan, Beban Mu'nah, &amp; Kelayakan DBR</h2>
+  <table>
+    <thead><tr><th>Komponen Angsuran / Tenor</th>${headCells}</tr></thead>
+    <tbody>
+      ${angsuranBodyRows}
+      <tr><td>Pendapatan Bersih Bulanan (x Kali Angsuran)</td>${kaliAngsuranCells}</tr>
+      <tr><td>Rasio DBR (Beban Angsuran / RPC)</td>${dbrCells}</tr>
+      <tr><td style="font-weight:700;">Status Kelayakan DBR (Maks. 40% RPC)</td>${statusDbrCells}</tr>
+    </tbody>
+  </table>
+
+  <h2>4. Analisis Pinjaman Rekomendasi Maksimal (Plafon Rekomendasi)</h2>
+  <table>
+    <thead><tr><th>Komponen Rekomendasi / Tenor</th>${headCells}</tr></thead>
+    <tbody>
+      <tr><td>${escapeHtml(plafonAgunanLabel)}</td>${plafonAgunanCells}</tr>
+      ${plafonSkemaRow}
+      <tr><td>${isKur ? "Plafon Maksimal Kemampuan Membayar (RPC 40%)" : "Plafon Maksimal Kemampuan Membayar (RPC)"}</td>${kemampuanCells}</tr>
+      <tr class="strong"><td>${escapeHtml(rekomendasiLabel)}</td>${rekomendasiCells}</tr>
+      <tr><td style="font-weight:700;">Status Pengajuan UP (vs Plafon Rekomendasi)</td>${statusRekCells}</tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    Dokumen Internal Pegadaian Syariah Daan Mogot — Berisi data lengkap parameter, proyeksi pencairan bersih, rincian mu'nah pemeliharaan, evaluasi DBR, dan rekomendasi plafon maksimal untuk produk ${escapeHtml(cfg.label)}.
+  </div>
+</body></html>`;
+
+    const win = window.open("", "_blank");
+    if (!win) { alert("Popup diblokir browser. Izinkan popup untuk situs ini agar bisa mengunduh."); return; }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => { win.focus(); win.print(); };
+    setTimeout(() => { win.focus(); win.print(); }, 400);
+  };
+
   const overLtv = taksiranNum > 0 && upNum > result.plafonLtv;
   const overCapMultiguna = isMultiguna && upNum > 100000000;
   const underMinMultiguna = isMultiguna && upNum > 0 && upNum < 1000000;
@@ -4288,19 +4528,6 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
                     ? "Tenor 12 s.d. 60 Bulan (Tenor 48 & 60 bulan berlaku untuk UP > Rp 100 Juta)"
                     : "Tenor 12 s.d. 36 Bulan (Maksimal 36 Bulan)"}
             </div>
-          </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button
-              onClick={handleCopyWa}
-              style={{
-                fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 12.5, fontWeight: 600,
-                padding: "8px 14px", borderRadius: 6, border: "1px solid #25D366", background: copiedWa ? "#25D366" : "#E8F5E9",
-                color: copiedWa ? "#fff" : "#1B5E20", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6
-              }}
-            >
-              {copiedWa ? "Tersalin ke Clipboard!" : "Salin Format WhatsApp"}
-            </button>
-            <ExportMenu onExportPng={handleDownloadPng} onExportPdf={handleDownloadPdf} />
           </div>
         </div>
 
@@ -4512,10 +4739,10 @@ _Catatan: Hasil rincian di atas bersifat simulasi sementara dan dapat berubah me
             <Download size={16} /> Ekspor Gambar (PNG)
           </button>
           <button
-            onClick={handleCopyWa}
-            style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13.5, fontWeight: 600, padding: "10px 18px", borderRadius: 6, border: "1px solid #25D366", background: "#E8F5E9", color: "#1B5E20", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
+            onClick={handleDownloadInternalPdf}
+            style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 13.5, fontWeight: 600, padding: "10px 18px", borderRadius: 6, border: "1px solid #B5872B", background: "#FDF8EE", color: "#7A5813", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
           >
-            {copiedWa ? "Tersalin ke Clipboard!" : "Salin Pesan WhatsApp"}
+            <FileText size={16} /> PDF Internal
           </button>
         </div>
       </div>
